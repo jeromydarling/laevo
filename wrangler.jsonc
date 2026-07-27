@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "laevo",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./build/client"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "placement": {
+    "mode": "smart"
+  },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "SITE_URL": "https://laevo.app",
+    "EMAIL_FROM": "hello@laevo.app",
+    "EMAIL_REPLY_TO": "hello@laevo.app",
+    "EMAIL_FROM_NAME": "Laevo"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "laevo-db",
+      "database_id": "1fd1cf8e-e7e6-4d8a-a870-395cdb9ac366",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "bfeb96deda3d4823b1ab3d70296e288e"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "laevo-files"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ],
+  "triggers": {
+    "crons": ["17 7 * * *", "*/30 * * * *"]
+  }
+}
