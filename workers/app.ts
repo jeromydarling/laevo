@@ -65,6 +65,14 @@ export default {
   ): Promise<Response> {
     const url = new URL(request.url);
 
+    // www and the apex resolve to the same Worker, so without this the whole
+    // site exists twice and every canonical tag argues with the URL the
+    // visitor is actually on. One permanent redirect, path and query intact.
+    if (url.hostname.startsWith("www.")) {
+      url.hostname = url.hostname.slice(4);
+      return Response.redirect(url.toString(), 301);
+    }
+
     // Files that have to be served by the Worker because they are generated
     // from the same registries the pages are built from.
     switch (url.pathname) {

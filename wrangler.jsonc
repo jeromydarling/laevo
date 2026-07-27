@@ -45,6 +45,13 @@
       "name": "EMAIL"
     }
   ],
+  // The apex was attached by hand in the dashboard; declaring it here keeps
+  // the routing in the repo with everything else, and adds www, which had no
+  // record at all and so simply failed for anyone who types it out of habit.
+  "routes": [
+    { "pattern": "laevo.us", "custom_domain": true },
+    { "pattern": "www.laevo.us", "custom_domain": true }
+  ],
   "triggers": {
     "crons": ["17 7 * * *", "*/30 * * * *"]
   }
