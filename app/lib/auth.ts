@@ -25,6 +25,13 @@ export const SESSION_COOKIE = "laevo_session";
 
 export type Role = "admin" | "staff" | "volunteer";
 
+/**
+ * How this person wants the app laid out. Roomy is the right answer for a
+ * shared tablet at the window; standard is the right answer for a laptop on a
+ * Tuesday evening. Neither is a downgrade.
+ */
+export type ViewMode = "standard" | "roomy";
+
 export interface SessionUser {
   id: string;
   orgId: string;
@@ -36,6 +43,7 @@ export interface SessionUser {
   isDemo: boolean;
   /** The person asked for larger type; we remember it across devices. */
   largeText: boolean;
+  viewMode: ViewMode;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,7 +187,7 @@ async function loadUser(
   const token = readCookie(request, SESSION_COOKIE);
   if (!token) return null;
   const row = await env.DB.prepare(
-    `SELECT u.id, u.org_id, u.email, u.name, u.role, u.large_text,
+    `SELECT u.id, u.org_id, u.email, u.name, u.role, u.large_text, u.view_mode,
             o.name AS org_name, o.slug AS org_slug, o.is_demo
        FROM sessions s
        JOIN users u ON u.id = s.user_id
@@ -197,6 +205,7 @@ async function loadUser(
       name: string;
       role: Role;
       large_text: number;
+      view_mode: ViewMode;
       org_name: string;
       org_slug: string;
       is_demo: number;
@@ -212,6 +221,7 @@ async function loadUser(
     orgSlug: row.org_slug,
     isDemo: row.is_demo === 1,
     largeText: row.large_text === 1,
+    viewMode: row.view_mode === "roomy" ? "roomy" : "standard",
   };
 }
 

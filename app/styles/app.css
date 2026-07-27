@@ -1084,14 +1084,34 @@ figcaption {
 
 /* --------------------------------------------------------------------------
    The app shell
+
+   Two layouts, chosen by the person rather than guessed at.
+
+     roomy    — large text and large targets at every width. The right answer
+                for a shared tablet at the window, and the design the whole
+                product was built around.
+     standard — an ordinary application layout: a sidebar on a wide screen,
+                denser spacing, more on screen at once. The right answer for
+                somebody doing the month's reporting on a laptop.
+
+   Everything below is scoped to .app-shell, so the marketing site keeps its
+   generous sizing regardless. And standard is denser, not careless: targets
+   stay at or above the 44px accessibility floor, inputs stay at 16px so iOS
+   does not zoom, and focus rings are untouched.
    -------------------------------------------------------------------------- */
 
 .app-shell {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  /* Room for the fixed bottom bar plus the phone's own home indicator. */
   padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
+
+.app-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .app-header {
@@ -1108,9 +1128,56 @@ figcaption {
 .app-header .wordmark {
   color: #ffffff;
   font-size: var(--t-body);
+  min-width: 0;
+}
+.app-header .wordmark span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1080px;
+  margin: 0 auto;
+  width: 100%;
+}
+.app-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The text-size control sits on the dark header in the roomy layout, where
+   its green border and green pressed state both disappear into the
+   background. On dark, it goes light. */
+.app-header .text-size {
+  /* The container is white by default, which on a dark header left white
+     letters on a white box — invisible. The whole control goes transparent. */
+  background: transparent;
+  border-color: #ffffff;
+  flex: 0 0 auto;
+}
+.app-header .text-size button {
+  background: transparent;
+  color: #ffffff;
+  border-right-color: rgba(255, 255, 255, 0.4);
+}
+.app-header .text-size button[aria-pressed="true"] {
+  background: #ffffff;
+  color: var(--green-deep);
+}
+/* On a phone the switch is behind Settings rather than in the header, where
+   there is no room for it next to the text-size control. */
+.app-header-switch {
+  display: none;
 }
 
 .demo-banner {
+  /* A banner is chrome, not prose — the 68ch measure would clip it. */
+  max-width: none;
   background: var(--gold-wash);
   border-bottom: 3px solid var(--gold);
   color: #6b4405;
@@ -1123,6 +1190,23 @@ figcaption {
 .app-main {
   flex: 1;
   padding: 24px 0 40px;
+}
+
+/* Inside the app, a list item is a row of interface rather than a line of
+   text, so the readable-measure cap that serves the marketing pages would
+   just leave rows stopping short of the card they sit in. Paragraphs keep
+   their measure, because those really are prose. */
+.app-shell li {
+  max-width: none;
+}
+.app-shell .stat .lbl,
+.app-shell .row-sub {
+  max-width: none;
+}
+
+/* The sidebar exists only in the standard layout on a wide screen. */
+.sidebar {
+  display: none;
 }
 
 .tabbar {
@@ -1160,6 +1244,221 @@ figcaption {
 .tabbar svg {
   width: 26px;
   height: 26px;
+}
+
+.view-switch-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 44px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--green-deep);
+  background: var(--card);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.view-switch-btn:hover {
+  border-color: var(--green-deep);
+}
+.view-switch-hint {
+  font-weight: 400;
+  font-size: var(--t-tiny);
+  color: var(--ink-faint);
+}
+
+/* ---- The standard layout on a wide screen ---- */
+
+@media (min-width: 1000px) {
+  .app-shell[data-view="standard"] {
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    padding-bottom: 0;
+    /* Denser, but never below the accessibility floor: 44px targets, 16px
+       inputs, same focus rings. */
+    --step: 16px;
+    --tap: 44px;
+  }
+
+  .app-shell[data-view="standard"] .tabbar {
+    display: none;
+  }
+
+  .app-shell[data-view="standard"] .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--green-deep);
+    padding: 20px 14px;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .app-shell[data-view="standard"] .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: var(--t-lead);
+    text-decoration: none;
+    padding: 8px 10px 18px;
+    letter-spacing: -0.01em;
+  }
+
+  .app-shell[data-view="standard"] .sidebar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .app-shell[data-view="standard"] .sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    color: #cfe3d7;
+    font-weight: 700;
+    font-size: var(--t-small);
+    text-decoration: none;
+  }
+  .app-shell[data-view="standard"] .sidebar a:hover {
+    background: #0b3a27;
+    color: #ffffff;
+  }
+  .app-shell[data-view="standard"] .sidebar a[aria-current="page"] {
+    background: #ffffff;
+    color: var(--green-deep);
+  }
+  .app-shell[data-view="standard"] .sidebar svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+  }
+
+  .app-shell[data-view="standard"] .sidebar-heading {
+    color: #8fb3a0;
+    font-size: var(--t-tiny);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 20px 12px 8px;
+  }
+
+  .app-shell[data-view="standard"] .sidebar-foot {
+    margin-top: auto;
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .app-shell[data-view="standard"] .sidebar-signout {
+    color: #a9c6b6;
+    font-size: var(--t-small);
+  }
+
+  /* The org name is already at the top of the sidebar. */
+  .app-shell[data-view="standard"] .app-header-brand {
+    display: none;
+  }
+  .app-shell[data-view="standard"] .app-header {
+    background: var(--card);
+    color: var(--ink);
+    border-bottom: 2px solid var(--line);
+    padding: 10px 24px;
+  }
+  .app-shell[data-view="standard"] .app-header a {
+    color: var(--ink);
+  }
+  .app-shell[data-view="standard"] .app-header .text-size {
+    background: var(--card);
+    border-color: var(--green-deep);
+  }
+  .app-shell[data-view="standard"] .app-header .text-size button {
+    color: var(--green-deep);
+    border-right-color: var(--line);
+  }
+  .app-shell[data-view="standard"] .app-header .text-size button[aria-pressed="true"] {
+    background: var(--green-deep);
+    color: #ffffff;
+  }
+  .app-shell[data-view="standard"] .app-header-inner {
+    max-width: none;
+    justify-content: flex-end;
+  }
+  .app-shell[data-view="standard"] .app-header-switch {
+    display: block;
+  }
+  .app-shell[data-view="standard"] .view-switch-btn {
+    width: auto;
+  }
+
+  .app-shell[data-view="standard"] .app-main {
+    padding: 28px 0 56px;
+  }
+
+  /* More on screen at once, which is the whole point of asking for this. */
+  .app-shell[data-view="standard"] .wrap {
+    max-width: 1180px;
+    padding: 0 24px;
+  }
+  .app-shell[data-view="standard"] .card {
+    padding: 20px;
+  }
+  .app-shell[data-view="standard"] .stack-lg > * + * {
+    margin-top: 20px;
+  }
+  .app-shell[data-view="standard"] .row-link {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+  .app-shell[data-view="standard"] .btn {
+    min-height: 44px;
+    padding: 10px 20px;
+    font-size: var(--t-body);
+  }
+  .app-shell[data-view="standard"] .btn-big {
+    min-height: 48px;
+    font-size: var(--t-lead);
+    padding: 12px 24px;
+  }
+  /* A button stretched across a whole desktop column reads as a mistake, so
+     block buttons keep their shape but stop growing. Inside a narrow card
+     they still fill it, which is what they are for. */
+  .app-shell[data-view="standard"] .btn-block {
+    max-width: 420px;
+  }
+  .app-shell[data-view="standard"] form .btn-block {
+    display: inline-flex;
+    width: auto;
+    min-width: 240px;
+  }
+  .app-shell[data-view="standard"] th,
+  .app-shell[data-view="standard"] td {
+    padding: 10px 14px;
+  }
+  .app-shell[data-view="standard"] .stat-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .app-shell[data-view="standard"] .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .app-shell[data-view="standard"] .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .app-shell[data-view="standard"] h1 {
+    font-size: calc(var(--step) * 1.9);
+  }
 }
 
 /* One task per screen: a big, obvious row you press. */

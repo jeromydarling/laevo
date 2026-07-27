@@ -179,9 +179,18 @@ export async function seedDemo(env: Env): Promise<string> {
   for (const [id, email, name, role] of users) {
     statements.push(
       env.DB.prepare(
-        `INSERT INTO users (id, org_id, email, name, role, password_hash, active, large_text)
-         VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
-      ).bind(id, orgId, email, name, role, passwordHash, role === "volunteer" ? 1 : 0),
+        `INSERT INTO users (id, org_id, email, name, role, password_hash, active, large_text, view_mode)
+         VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+      ).bind(
+        id,
+        orgId,
+        email,
+        name,
+        role,
+        passwordHash,
+        role === "volunteer" ? 1 : 0,
+        role === "volunteer" ? "roomy" : "standard",
+      ),
     );
   }
   const adminId = users[0][0];

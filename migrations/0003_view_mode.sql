@@ -1,0 +1,12 @@
+-- How this person wants the app laid out.
+--
+-- The roomy layout is right for a shared tablet at the window and wrong for
+-- somebody doing the month's reporting on a laptop. Those are different jobs,
+-- often done by the same pantry and sometimes by the same person, so it is a
+-- preference rather than a guess we make once.
+--
+-- Stored on the user rather than the device, because a coordinator who sets
+-- it on their laptop should not have to set it again on their phone.
+--   'standard' — a normal application layout: sidebar on a wide screen.
+--   'roomy'    — large text and large targets at every width.
+ALTER TABLE users ADD COLUMN view_mode TEXT NOT NULL DEFAULT 'standard';
