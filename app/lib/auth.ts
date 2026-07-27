@@ -8,7 +8,18 @@
 import type { Env } from "./env";
 import { newId, newToken } from "./ids";
 
-const PBKDF2_ITERATIONS = 210_000;
+/**
+ * The Workers runtime refuses PBKDF2 above 100,000 iterations
+ * ("NotSupportedError: iteration counts above 100000 are not supported"), so
+ * this is a platform ceiling rather than our choice. Miniflare does not
+ * enforce it, which means raising this number passes every local test and
+ * then breaks every password operation in production — so it is pinned by a
+ * test. OWASP currently suggests more for PBKDF2-SHA256; when Workers allows
+ * it, raise this. The iteration count is stored inside each hash, so old
+ * hashes keep verifying and can be upgraded in place.
+ */
+export const PBKDF2_ITERATIONS = 100_000;
+export const PBKDF2_MAX_SUPPORTED = 100_000;
 const SESSION_DAYS = 30;
 export const SESSION_COOKIE = "laevo_session";
 
