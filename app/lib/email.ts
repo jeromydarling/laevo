@@ -100,7 +100,7 @@ export async function sendEmail(
     return { ok: true, status: "suppressed" };
   }
 
-  const from = env.EMAIL_FROM || "hello@laevo.app";
+  const from = env.EMAIL_FROM || "hello@laevo.us";
   const fromName = env.EMAIL_FROM_NAME || "Laevo";
   const replyTo = message.replyTo || env.EMAIL_REPLY_TO || from;
 

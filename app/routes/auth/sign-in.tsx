@@ -12,7 +12,7 @@ export function meta() {
     title: "Sign in",
     description: "Sign in to your pantry's Laevo account.",
     path: "/sign-in",
-    siteUrl: "https://laevo.app",
+    siteUrl: "https://laevo.us",
     noIndex: true,
   });
 }

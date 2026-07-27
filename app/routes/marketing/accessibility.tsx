@@ -13,7 +13,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "What Laevo does for people with low vision, unsteady hands, low digital confidence and old devices — and, specifically, what it does not do yet.",
     path: "/accessibility",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

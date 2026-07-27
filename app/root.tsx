@@ -16,7 +16,7 @@ export function links() {
   return [
     { rel: "stylesheet", href: stylesUrl },
     { rel: "icon", href: "/icon.svg", type: "image/svg+xml" },
-    { rel: "preconnect", href: "https://laevo.app" },
+    { rel: "preconnect", href: "https://laevo.us" },
   ];
 }
 

@@ -22,7 +22,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "Create a free Laevo account for your food pantry. No card, no sales call, and nothing to cancel.",
     path: "/sign-up",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 
@@ -38,7 +38,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
         {
           field: "form",
           message:
-            "That is several accounts from one place in a short time. Write to hello@laevo.app and we will set it up with you.",
+            "That is several accounts from one place in a short time. Write to hello@laevo.us and we will set it up with you.",
         },
       ],
     };

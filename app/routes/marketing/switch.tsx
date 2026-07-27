@@ -15,7 +15,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "How to move your existing neighbor records into Laevo from a CSV export — what happens, what we guess, what we ask you to check, and what we do not promise.",
     path: "/switch",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

@@ -16,7 +16,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "Honest comparisons of Laevo with PantrySoft, Link2Feed, Oasis Insight, spreadsheets and paper — including what each of them does better and when you should not switch.",
     path: "/compare",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

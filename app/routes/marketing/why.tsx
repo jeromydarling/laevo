@@ -15,7 +15,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "Ten beliefs about the people a food pantry serves, each paired with the specific thing Laevo does — or refuses to build — because of it.",
     path: "/why",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

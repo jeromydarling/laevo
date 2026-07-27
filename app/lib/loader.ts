@@ -17,5 +17,5 @@ export interface PublicLoaderData {
 
 export function publicData(context: unknown): PublicLoaderData {
   const { env } = ctx(context);
-  return { siteUrl: (env.SITE_URL || "https://laevo.app").replace(/\/$/, "") };
+  return { siteUrl: (env.SITE_URL || "https://laevo.us").replace(/\/$/, "") };
 }

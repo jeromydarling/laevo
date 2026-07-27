@@ -16,7 +16,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "Practical writing on starting a pantry, TEFAP reporting, cutting food waste, finding volunteers, helping older volunteers with tablets, and treating people well at the window.",
     path: "/guides",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

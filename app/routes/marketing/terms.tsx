@@ -14,7 +14,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "The agreement between your pantry and Laevo, written in short sentences: what we owe you, what you owe us, and how either of us can end it.",
     path: "/terms",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

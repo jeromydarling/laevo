@@ -10,7 +10,7 @@ export function meta() {
     title: "Unsubscribed",
     description: "You will not get any more of these.",
     path: "/unsubscribe",
-    siteUrl: "https://laevo.app",
+    siteUrl: "https://laevo.us",
     noIndex: true,
   });
 }

@@ -13,7 +13,7 @@ import { newId, newCardCode, newToken } from "../app/lib/ids";
 import { hashPassword } from "../app/lib/auth";
 
 export const DEMO_SLUG = "riverbend";
-export const DEMO_EMAIL = "demo@laevo.app";
+export const DEMO_EMAIL = "demo@laevo.us";
 export const DEMO_PASSWORD = "riverbend-demo-pantry";
 
 const FIRST_NAMES = [
@@ -180,8 +180,8 @@ export async function seedDemo(env: Env): Promise<string> {
 
   const users: Array<[string, string, string, string]> = [
     [newId("usr"), DEMO_EMAIL, "Dolores Whitfield", "admin"],
-    [newId("usr"), "volunteer@laevo.app", "Ray Petrov", "volunteer"],
-    [newId("usr"), "staff@laevo.app", "Aisha Boateng", "staff"],
+    [newId("usr"), "volunteer@laevo.us", "Ray Petrov", "volunteer"],
+    [newId("usr"), "staff@laevo.us", "Aisha Boateng", "staff"],
   ];
   for (const [id, email, name, role] of users) {
     statements.push(

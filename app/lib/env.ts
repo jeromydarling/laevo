@@ -56,5 +56,5 @@ export function billingIsLive(env: Env): boolean {
 }
 
 export function siteUrl(env: Env): string {
-  return (env.SITE_URL || "https://laevo.app").replace(/\/$/, "");
+  return (env.SITE_URL || "https://laevo.us").replace(/\/$/, "");
 }

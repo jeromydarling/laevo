@@ -235,7 +235,7 @@ describe("marketingMeta", () => {
     title: "Pricing",
     description: "What Laevo costs.",
     path: "/pricing",
-    siteUrl: "https://laevo.app",
+    siteUrl: "https://laevo.us",
   });
 
   const find = (pred: (t: Record<string, unknown>) => boolean) =>
@@ -243,7 +243,7 @@ describe("marketingMeta", () => {
 
   it("always produces a canonical URL", () => {
     const canonical = find((t) => t.rel === "canonical");
-    expect(canonical?.href).toBe("https://laevo.app/pricing");
+    expect(canonical?.href).toBe("https://laevo.us/pricing");
   });
 
   it("does not double the brand name on the home page", () => {
@@ -251,7 +251,7 @@ describe("marketingMeta", () => {
       title: "Laevo — software for food pantries",
       description: "x",
       path: "/",
-      siteUrl: "https://laevo.app",
+      siteUrl: "https://laevo.us",
     });
     const title = home.find((t) => "title" in (t as object)) as { title: string };
     expect(title.title).toBe("Laevo — software for food pantries");
@@ -268,12 +268,12 @@ describe("marketingMeta", () => {
       title: "x",
       description: "y",
       path: "/pricing",
-      siteUrl: "https://laevo.app/",
+      siteUrl: "https://laevo.us/",
     });
     const canonical = tagsWithSlash.find(
       (t) => (t as Record<string, unknown>).rel === "canonical",
     ) as Record<string, unknown>;
-    expect(canonical.href).toBe("https://laevo.app/pricing");
+    expect(canonical.href).toBe("https://laevo.us/pricing");
   });
 
   it("always sets a social preview image and card type", () => {
@@ -288,7 +288,7 @@ describe("marketingMeta", () => {
       title: "Sign in",
       description: "x",
       path: "/sign-in",
-      siteUrl: "https://laevo.app",
+      siteUrl: "https://laevo.us",
       noIndex: true,
     });
     const robots = priv.find(

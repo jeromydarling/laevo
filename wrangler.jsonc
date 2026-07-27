@@ -15,9 +15,9 @@
   },
   "vars": {
     "ENVIRONMENT": "production",
-    "SITE_URL": "https://laevo.app",
-    "EMAIL_FROM": "hello@laevo.app",
-    "EMAIL_REPLY_TO": "hello@laevo.app",
+    "SITE_URL": "https://laevo.us",
+    "EMAIL_FROM": "hello@laevo.us",
+    "EMAIL_REPLY_TO": "hello@laevo.us",
     "EMAIL_FROM_NAME": "Laevo"
   },
   "d1_databases": [

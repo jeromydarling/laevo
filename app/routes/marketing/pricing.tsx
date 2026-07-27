@@ -15,7 +15,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "Free forever for most food pantries. $19 a month for a busy one, $59 for a network. No per-user fee, no setup fee, no contract, and never a charge based on how many families you serve.",
     path: "/pricing",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

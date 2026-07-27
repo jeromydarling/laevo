@@ -19,7 +19,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "Write to Laevo. A person reads it and a person answers, usually within a day.",
     path: "/contact",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 
@@ -35,7 +35,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   if (!limit.allowed) {
     return {
       error:
-        "That is several messages in a short time. Give it an hour, or write to hello@laevo.app directly — that always works.",
+        "That is several messages in a short time. Give it an hour, or write to hello@laevo.us directly — that always works.",
       ok: false,
     };
   }
@@ -93,7 +93,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     message: message.value,
   });
   sendLater(env, execution, {
-    to: env.EMAIL_REPLY_TO || "hello@laevo.app",
+    to: env.EMAIL_REPLY_TO || "hello@laevo.us",
     kind: "contact_relay",
     replyTo: email.value,
     subject: template.subject,
@@ -136,7 +136,7 @@ export default function Contact() {
             usually it is the same day.
           </p>
           <p style={{ marginTop: 16 }}>
-            You can also email <strong>hello@laevo.app</strong> directly, which
+            You can also email <strong>hello@laevo.us</strong> directly, which
             is the same inbox.
           </p>
         </div>

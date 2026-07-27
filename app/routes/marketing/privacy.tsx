@@ -13,7 +13,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "What Laevo stores about the people your pantry serves, who can see it, how long it is kept, and the things we will never do with it.",
     path: "/privacy",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 
@@ -138,7 +138,7 @@ export default function Privacy() {
 
         <h2>Questions</h2>
         <p>
-          Write to <strong>hello@laevo.app</strong> and a person will answer.
+          Write to <strong>hello@laevo.us</strong> and a person will answer.
           If you need a data processing agreement for a funder,{" "}
           <Link to="/contact">ask</Link> and we will send one.
         </p>

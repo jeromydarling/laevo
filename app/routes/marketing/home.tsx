@@ -24,7 +24,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     title: "Laevo — software for food pantries",
     description: DEFAULT_DESCRIPTION,
     path: "/",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

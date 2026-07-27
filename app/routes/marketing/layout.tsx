@@ -10,7 +10,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   const { env } = ctx(context);
   const user = await getUser(env, request);
   return {
-    siteUrl: (env.SITE_URL || "https://laevo.app").replace(/\/$/, ""),
+    siteUrl: (env.SITE_URL || "https://laevo.us").replace(/\/$/, ""),
     signedIn: Boolean(user),
   };
 }

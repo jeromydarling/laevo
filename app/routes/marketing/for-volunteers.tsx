@@ -16,7 +16,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "Laevo is designed first for a seventy-three-year-old volunteer on a borrowed phone. Here is exactly what that changed: text size, tap targets, one column, plain words, and a paper fallback that is never a failure.",
     path: "/for-volunteers",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

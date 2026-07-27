@@ -15,7 +15,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "A walk through a pantry's week in Laevo: setting up on Monday, the shelf on Thursday, the window on Saturday, the rota, and the report at the end of the month.",
     path: "/how-it-works",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

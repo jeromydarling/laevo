@@ -84,11 +84,11 @@ describe("the session cookie", () => {
   });
 
   it("is read back out of a request", () => {
-    const request = new Request("https://laevo.app/app", {
+    const request = new Request("https://laevo.us/app", {
       headers: { Cookie: `other=1; ${SESSION_COOKIE}=abc123; another=2` },
     });
     expect(readCookie(request, SESSION_COOKIE)).toBe("abc123");
     expect(readCookie(request, "nope")).toBeNull();
-    expect(readCookie(new Request("https://laevo.app/"), SESSION_COOKIE)).toBeNull();
+    expect(readCookie(new Request("https://laevo.us/"), SESSION_COOKIE)).toBeNull();
   });
 });

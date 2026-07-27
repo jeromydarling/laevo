@@ -14,7 +14,7 @@ export function meta() {
     title: "Forgotten password",
     description: "Get a link to set a new Laevo password.",
     path: "/forgot",
-    siteUrl: "https://laevo.app",
+    siteUrl: "https://laevo.us",
     noIndex: true,
   });
 }

@@ -121,7 +121,7 @@ ${guides}
 
 ## Contact
 
-Write to hello@laevo.app. A person answers.
+Write to hello@laevo.us. A person answers.
 `;
 }
 

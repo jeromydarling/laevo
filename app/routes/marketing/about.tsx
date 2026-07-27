@@ -14,7 +14,7 @@ export function meta({ loaderData }: { loaderData?: { siteUrl: string } }) {
     description:
       "Why Laevo exists, what the name means, how it stays running, and what would have to be true for it to still be here in ten years.",
     path: "/about",
-    siteUrl: loaderData?.siteUrl ?? "https://laevo.app",
+    siteUrl: loaderData?.siteUrl ?? "https://laevo.us",
   });
 }
 

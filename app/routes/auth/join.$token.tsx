@@ -12,7 +12,7 @@ export function meta() {
     title: "Join your pantry",
     description: "Set your own password and join your pantry on Laevo.",
     path: "/join",
-    siteUrl: "https://laevo.app",
+    siteUrl: "https://laevo.us",
     noIndex: true,
   });
 }
