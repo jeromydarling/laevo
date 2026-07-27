@@ -12,15 +12,49 @@ const handler = createRequestHandler(
   import.meta.env.MODE,
 );
 
-/** Anonymous marketing GETs are cheap to cache and expensive to render. */
-const CACHEABLE = /^\/(|why|how-it-works|for-volunteers|pricing|compare|switch|guides|accessibility|about|privacy|terms|robots\.txt|sitemap\.xml|llms\.txt|icon\.svg|og\.svg)/;
+/**
+ * Anonymous marketing GETs are cheap to cache and expensive to render.
+ *
+ * The list is exact rather than a prefix match. An earlier version began
+ * `^\/(|why|...)` — that empty first alternative matches every path, which
+ * quietly made the whole site cacheable, `/app` and `/sign-in` included. It
+ * caused no leak, because a session cookie bypasses the cache and a signed-out
+ * app page redirects rather than returning a cacheable 200, but a rule that
+ * says "everything" while looking like it says "these pages" is one edit away
+ * from being a real problem.
+ */
+const CACHEABLE_EXACT = new Set([
+  "/",
+  "/why",
+  "/how-it-works",
+  "/for-volunteers",
+  "/pricing",
+  "/compare",
+  "/switch",
+  "/guides",
+  "/accessibility",
+  "/about",
+  "/privacy",
+  "/terms",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/llms.txt",
+  "/icon.svg",
+  "/og.svg",
+]);
+
+/** Content pages, which are generated from a registry and never per-visitor. */
+const CACHEABLE_PREFIX = ["/guides/", "/compare/"];
 
 function isCacheable(request: Request): boolean {
   if (request.method !== "GET") return false;
   const url = new URL(request.url);
   if (url.searchParams.has("preview")) return false;
   if (request.headers.get("Cookie")?.includes(`${SESSION_COOKIE}=`)) return false;
-  return CACHEABLE.test(url.pathname);
+  return (
+    CACHEABLE_EXACT.has(url.pathname) ||
+    CACHEABLE_PREFIX.some((prefix) => url.pathname.startsWith(prefix))
+  );
 }
 
 export default {
