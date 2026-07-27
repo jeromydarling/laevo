@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "db:migrate:local": "wrangler d1 migrations apply laevo-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply laevo-db --remote",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "photos": "node scripts/optimize-photos.mjs"
   },
   "repository": {
     "type": "git",

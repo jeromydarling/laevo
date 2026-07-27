@@ -4,6 +4,7 @@ import { publicData } from "~/lib/loader";
 import { marketingMeta } from "~/lib/meta";
 import { breadcrumbLd } from "~/lib/jsonld";
 import { GUIDES, GUIDE_CATEGORIES, readingMinutes } from "~/content/guides";
+import { Photo } from "~/components/Photo";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   return publicData(context);
@@ -45,6 +46,9 @@ export default function Guides() {
             is a feature list with a headline on it — if a guide does not end
             with something you could do tomorrow, it does not go up.
           </p>
+          <div style={{ marginTop: 32 }}>
+            <Photo photo="produce" priority sizes="(min-width: 760px) 680px, 100vw" />
+          </div>
         </div>
       </section>
 

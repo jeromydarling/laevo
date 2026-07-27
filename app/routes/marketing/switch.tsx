@@ -3,6 +3,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { publicData } from "~/lib/loader";
 import { marketingMeta } from "~/lib/meta";
 import { breadcrumbLd, faqLd } from "~/lib/jsonld";
+import { Photo } from "~/components/Photo";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   return publicData(context);
@@ -65,6 +66,9 @@ export default function Switch() {
             built carefully, and the part we are most careful not to overpromise
             about.
           </p>
+          <div style={{ marginTop: 32 }}>
+            <Photo photo="shelf" priority sizes="(min-width: 760px) 680px, 100vw" />
+          </div>
         </div>
       </section>
 
