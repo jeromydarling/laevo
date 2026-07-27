@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLoaderData } from "react-router";
+import { Link, Outlet, useLoaderData } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { Wordmark, WheatMark } from "~/components/Brand";
 import { TextSizeControl } from "~/components/TextSize";
@@ -32,37 +32,28 @@ export default function MarketingLayout() {
       <header className="site-header">
         <div className="site-header-inner">
           <Wordmark />
-          <nav className="nav-desktop" aria-label="Main">
-            {NAV.map((item) => (
-              <NavLink key={item.to} to={item.to} prefetch="intent">
-                {item.label}
-              </NavLink>
-            ))}
-            <Link
-              to={signedIn ? "/app" : "/demo"}
-              className="btn btn-primary"
-              style={{ marginLeft: 8, minHeight: 48, padding: "10px 20px" }}
-            >
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* A disclosure element, so the menu works with JavaScript
+                switched off or still loading. */}
+            <details className="nav-menu">
+              <summary className="nav-toggle">Menu</summary>
+              <nav className="nav-panel" aria-label="Main">
+                {NAV.map((item) => (
+                  <Link key={item.to} to={item.to} prefetch="intent">
+                    {item.label}
+                  </Link>
+                ))}
+                <Link to="/about">About</Link>
+                <Link to="/contact">Contact</Link>
+                <Link to="/sign-in">Sign in</Link>
+              </nav>
+            </details>
+
+            <Link to={signedIn ? "/app" : "/demo"} className="btn btn-primary nav-cta">
               {signedIn ? "Open my pantry" : "Try the demo"}
             </Link>
-          </nav>
-
-          <details className="nav-mobile-wrap">
-            <summary className="nav-toggle" aria-label="Menu">
-              Menu
-            </summary>
-            <div className="nav-mobile">
-              {NAV.map((item) => (
-                <Link key={item.to} to={item.to}>
-                  {item.label}
-                </Link>
-              ))}
-              <Link to={signedIn ? "/app" : "/demo"}>
-                {signedIn ? "Open my pantry" : "Try the demo"}
-              </Link>
-              <Link to="/sign-in">Sign in</Link>
-            </div>
-          </details>
+          </div>
         </div>
       </header>
 

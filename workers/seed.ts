@@ -145,6 +145,7 @@ export async function seedDemo(env: Env): Promise<string> {
     );
   }
 
+  const siteId2 = newId("site");
   statements.push(
     env.DB.prepare(
       `INSERT INTO sites (id, org_id, name, address, hours_note)
@@ -155,6 +156,18 @@ export async function seedDemo(env: Env): Promise<string> {
       "Riverbend — the hall behind the library",
       "1420 Clifton Boulevard",
       "Saturdays 9am to noon, Tuesdays 5pm to 7pm",
+    ),
+    // A second location, so the demo shows what a Network pantry looks like
+    // and the per-location report breakdown has something to break down.
+    env.DB.prepare(
+      `INSERT INTO sites (id, org_id, name, address, hours_note)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).bind(
+      siteId2,
+      orgId,
+      "Riverbend West — the old fire station",
+      "9004 Madison Avenue",
+      "Thursdays 4pm to 6pm",
     ),
   );
 
@@ -177,6 +190,11 @@ export async function seedDemo(env: Env): Promise<string> {
   const random = rng(20260727);
   const contactIds: string[] = [];
   const contactSizes: number[] = [];
+  // Carried onto each visit, because that is where every age-band report
+  // reads from — a visit records the household as it was that day.
+  const contactAdults: number[] = [];
+  const contactChildren: number[] = [];
+  const contactSeniors: number[] = [];
 
   for (let i = 0; i < 46; i++) {
     const id = newId("nb");
@@ -188,6 +206,9 @@ export async function seedDemo(env: Env): Promise<string> {
     const seniors = random() > 0.72 ? 1 : 0;
     const size = adults + children + seniors;
     contactSizes.push(size);
+    contactAdults.push(adults);
+    contactChildren.push(children);
+    contactSeniors.push(seniors);
     const needs = NEEDS[Math.floor(random() * NEEDS.length)];
     const firstVisit = 20 + Math.floor(random() * 160);
     const lastVisit = Math.floor(random() * 18);
@@ -222,6 +243,27 @@ export async function seedDemo(env: Env): Promise<string> {
     );
   }
 
+  // A household entered twice with the name spelled differently, because that
+  // is the single most common thing in a real pantry's records and the merge
+  // screen should have something honest to demonstrate on.
+  const dupId = newId("nb");
+  statements.push(
+    env.DB.prepare(
+      `INSERT INTO contacts (id, org_id, roles, first_name, last_name, phone,
+                             address_line, city, state, zip, household_size, adults,
+                             children, seniors, card_code, unsub_token, created_at)
+       VALUES (?, ?, 'neighbor', 'Peggy', 'Whitfeild', '2165550142', '1420 Clifton Avenue',
+               'Lakewood', 'OH', '44107', 3, 2, 1, 0, ?, ?, ?)`,
+    ).bind(dupId, orgId, newCardCode(), newToken(16), daysAgo(30)),
+    env.DB.prepare(
+      `INSERT INTO contacts (id, org_id, roles, first_name, last_name, phone,
+                             address_line, city, state, zip, household_size, adults,
+                             children, seniors, card_code, unsub_token, created_at)
+       VALUES (?, ?, 'neighbor', 'Margaret', 'Whitfield', '2165550142', '1420 Clifton Avenue',
+               'Lakewood', 'OH', '44107', 3, 2, 1, 0, ?, ?, ?)`,
+    ).bind(newId("nb"), orgId, newCardCode(), newToken(16), daysAgo(140)),
+  );
+
   // ---- Visits over the last 90 days -------------------------------------
   const visitCounts = new Map<string, number>();
   for (let day = 90; day >= 0; day--) {
@@ -238,14 +280,17 @@ export async function seedDemo(env: Env): Promise<string> {
         env.DB.prepare(
           `INSERT INTO visits (id, org_id, contact_id, site_id, visited_at, household_size,
                                adults, children, seniors, first_visit, channel, recorded_by)
-           VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, 'walk_in', ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'walk_in', ?)`,
         ).bind(
           newId("vst"),
           orgId,
           contactId,
-          siteId,
+          n % 4 === 0 ? siteId2 : siteId,
           daysAgo(day, dow === 6 ? 10 : 17),
           contactSizes[idx],
+          contactAdults[idx],
+          contactChildren[idx],
+          contactSeniors[idx],
           count === 1 ? 1 : 0,
           adminId,
         ),
@@ -301,6 +346,44 @@ export async function seedDemo(env: Env): Promise<string> {
       );
     }
   });
+
+  // ---- Past shifts, already attended, so hours have something to add up ---
+  for (let w = 1; w <= 6; w++) {
+    const shiftId = newId("shf");
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO shifts (id, org_id, site_id, title, starts_at, ends_at, slots, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
+      ).bind(
+        shiftId,
+        orgId,
+        siteId,
+        "Saturday distribution",
+        daysAgo(w * 7, 9),
+        daysAgo(w * 7, 12),
+        8,
+      ),
+    );
+    const came = 4 + Math.floor(random() * 4);
+    for (let s = 0; s < came; s++) {
+      const first = FIRST_NAMES[Math.floor(random() * FIRST_NAMES.length)];
+      const last = LAST_NAMES[Math.floor(random() * LAST_NAMES.length)];
+      statements.push(
+        env.DB.prepare(
+          `INSERT INTO signups (id, org_id, shift_id, name, email, status, hours, created_at)
+           VALUES (?, ?, ?, ?, ?, 'came', ?, ?)`,
+        ).bind(
+          newId("sup"),
+          orgId,
+          shiftId,
+          `${first} ${last}`,
+          `${first.toLowerCase()}@example.org`,
+          3,
+          daysAgo(w * 7 + 3),
+        ),
+      );
+    }
+  }
 
   // ---- Shifts and signups ------------------------------------------------
   for (let w = 0; w < 4; w++) {

@@ -202,68 +202,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---- The elderly-first commitment ---- */}
-      <section className="section-ink">
-        <div className="wrap">
-          <div className="grid grid-2" style={{ alignItems: "center" }}>
-            <div className="stack">
-              <p className="eyebrow" style={{ color: "#f2c14e" }}>
-                The main design constraint
-              </p>
-              <h2>Built for the volunteer who does not love computers</h2>
-              <p className="lead">
-                A large share of the people keeping pantries open are retired,
-                and plenty of them never used a computer at work. They are not
-                bad at technology. They are handed tools designed by people who
-                have never watched them try.
-              </p>
-              <p>
-                So we watched. Then we made the text big and gave it a button to
-                make it bigger. We made every target you have to hit at least
-                fifty-six pixels across, because a tap that lands slightly off
-                and does nothing is how someone decides they are the problem. We
-                put one thing on each screen. We removed every menu hidden
-                behind three dots. We made confirmation messages stay on screen
-                until they are dismissed, so nobody is left wondering whether it
-                worked.
-              </p>
-              <p>
-                None of that is an accessibility checkbox we ticked at the end.
-                It is the constraint every feature has to survive, and features
-                that break it do not ship.
-              </p>
-              <p style={{ marginTop: 12 }}>
-                <Link className="btn btn-secondary" to="/for-volunteers">
-                  See exactly what that changed
-                </Link>
-              </p>
-            </div>
-
-            <div
-              className="card"
-              style={{ background: "#0b3a27", borderColor: "#2b6349" }}
-            >
-              <h3 style={{ color: "#fff" }}>The rules we hold ourselves to</h3>
-              <ul
-                className="stack"
-                style={{ listStyle: "none", marginTop: 16, color: "#cfe3d7" }}
-              >
-                <li>Body text starts at 18 pixels and goes to 24 with one tap.</li>
-                <li>Nothing you tap is smaller than 56 pixels on its short edge.</li>
-                <li>One column on a phone. Always.</li>
-                <li>Nothing important behind a hover, a swipe, or a menu.</li>
-                <li>Plain words. No jargon, no abbreviations we invented.</li>
-                <li>Every screen works one-handed.</li>
-                <li>Every screen has a paper fallback that is not a failure.</li>
-              </ul>
-              <div style={{ marginTop: 20 }}>
-                <Photo photo="handsTablet" sizes="(min-width: 720px) 480px, 100vw" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ---- What it does ---- */}
       <section>
         <div className="wrap">

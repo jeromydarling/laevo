@@ -11,7 +11,14 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const q = clampText(url.searchParams.get("q"), 60);
 
-  if (!q) return { q: "", results: [], searched: false };
+  if (!q) {
+    const sites = await env.DB.prepare(
+      "SELECT id, name FROM sites WHERE org_id = ? AND archived_at IS NULL ORDER BY created_at",
+    )
+      .bind(user.orgId)
+      .all<{ id: string; name: string }>();
+    return { q: "", results: [], searched: false, sites: sites.results ?? [] };
+  }
 
   // One box, three ways of finding somebody: a bit of a name, a phone number,
   // or the short code on the card they carry.
@@ -46,7 +53,18 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
       visit_count: number;
     }>();
 
-  return { q, results: results.results ?? [], searched: true };
+  const sites = await env.DB.prepare(
+    "SELECT id, name FROM sites WHERE org_id = ? AND archived_at IS NULL ORDER BY created_at",
+  )
+    .bind(user.orgId)
+    .all<{ id: string; name: string }>();
+
+  return {
+    q,
+    results: results.results ?? [],
+    searched: true,
+    sites: sites.results ?? [],
+  };
 }
 
 export async function action({ context, request }: ActionFunctionArgs) {
@@ -75,11 +93,20 @@ export async function action({ context, request }: ActionFunctionArgs) {
     return { error: "We could not find that household. Try the search again." };
   }
 
-  const site = await env.DB.prepare(
-    "SELECT id FROM sites WHERE org_id = ? ORDER BY created_at LIMIT 1",
-  )
-    .bind(user.orgId)
-    .first<{ id: string }>();
+  // A pantry with more than one location picks; a pantry with one does not
+  // get asked a question it has no choice about.
+  const chosenSite = String(form.get("siteId") ?? "");
+  const site = chosenSite
+    ? await env.DB.prepare(
+        "SELECT id FROM sites WHERE id = ? AND org_id = ?",
+      )
+        .bind(chosenSite, user.orgId)
+        .first<{ id: string }>()
+    : await env.DB.prepare(
+        "SELECT id FROM sites WHERE org_id = ? AND archived_at IS NULL ORDER BY created_at LIMIT 1",
+      )
+        .bind(user.orgId)
+        .first<{ id: string }>();
 
   await env.DB.batch([
     env.DB.prepare(
@@ -126,7 +153,7 @@ function sinceLabel(sqlDate: string | null): string {
 }
 
 export default function Window() {
-  const { q, results, searched } = useLoaderData<typeof loader>();
+  const { q, results, searched, sites } = useLoaderData<typeof loader>();
   const result = useActionData<{ recorded?: string; error?: string }>();
   const navigation = useNavigation();
   const [params] = useSearchParams();
@@ -219,6 +246,18 @@ export default function Window() {
 
               <Form method="post" style={{ marginTop: 16 }}>
                 <input type="hidden" name="contactId" value={person.id} />
+                {sites.length > 1 && (
+                  <div className="field">
+                    <label htmlFor={`site-${person.id}`}>Which location?</label>
+                    <select id={`site-${person.id}`} name="siteId">
+                      {sites.map((site) => (
+                        <option key={site.id} value={site.id}>
+                          {site.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <button
                   type="submit"
                   className="btn btn-primary btn-big btn-block"
