@@ -25,15 +25,20 @@ export function meta() {
 
 /**
  * Five tabs across the bottom, where a thumb already is. Not a hamburger, not
- * a drawer, not three dots. Everything else in the product is reachable from
- * the first one.
+ * a drawer, not three dots.
+ *
+ * The fifth is a real page rather than a menu, because the first version of
+ * this hid reports and the importer at the bottom of the Today screen and
+ * people simply did not find them. Five big targets and one obvious "More"
+ * beats six cramped ones, and everything in the product is at most two taps
+ * away.
  */
 const TABS = [
   { to: "/app", label: "Today", icon: "M4 5h16v15H4zM4 9h16M8 3v4M16 3v4" },
   { to: "/app/window", label: "Window", icon: "M12 4v16M4 12h16" },
   { to: "/app/neighbors", label: "Neighbors", icon: "M12 11a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 3.6-7 8-7s8 3 8 7" },
   { to: "/app/shelf", label: "Shelf", icon: "M3 6h18M3 12h18M3 18h18" },
-  { to: "/app/shifts", label: "Rota", icon: "M5 4h14v16H5zM9 9h6M9 13h6M9 17h3" },
+  { to: "/app/more", label: "More", icon: "M4 6h16M4 12h16M4 18h16" },
 ];
 
 export default function AppLayout() {

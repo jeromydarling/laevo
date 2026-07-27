@@ -609,39 +609,23 @@ textarea:focus {
   flex: 0 0 auto;
 }
 
-.nav-desktop {
-  display: none;
-}
+/* One menu at every width.
+   There used to be a separate desktop row of links here. Two navigations
+   meant two things to keep in step, and the desktop one also set a link
+   colour that quietly overrode the white on the primary button — dark ink on
+   dark green, unreadable. One disclosure menu and one button is less to get
+   wrong, and it is the same thing a phone user learns. */
 
-@media (min-width: 940px) {
-  .nav-desktop {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .nav-desktop a {
-    padding: 12px 14px;
-    font-weight: 700;
-    font-size: var(--t-small);
-    text-decoration: none;
-    color: var(--ink);
-    border-radius: var(--radius-sm);
-  }
-  .nav-desktop a:hover {
-    background: var(--green-wash);
-    color: var(--green-deep);
-  }
-  .nav-toggle {
-    display: none;
-  }
+.nav-menu {
+  position: relative;
 }
 
 .nav-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-height: 52px;
-  padding: 10px 16px;
+  padding: 10px 18px;
   font-family: inherit;
   font-size: var(--t-small);
   font-weight: 700;
@@ -650,27 +634,83 @@ textarea:focus {
   border: 3px solid var(--green-deep);
   border-radius: var(--radius-sm);
   cursor: pointer;
+  list-style: none;
+  touch-action: manipulation;
+}
+.nav-toggle::-webkit-details-marker {
+  display: none;
+}
+.nav-toggle::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid currentColor;
+}
+.nav-menu[open] .nav-toggle::after {
+  transform: rotate(180deg);
 }
 
-/* Menu is a details/summary so it works with JavaScript switched off. */
-.nav-mobile {
-  border-top: 2px solid var(--line);
+/* Full width under the header on a phone; a panel on a wide screen. */
+.nav-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 60;
+  min-width: 260px;
   background: var(--card);
-  padding: 12px 20px 20px;
+  border: 3px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  padding: 8px 16px 12px;
 }
-.nav-mobile a {
+.nav-panel a {
   display: flex;
   align-items: center;
   min-height: var(--tap);
-  padding: 14px 8px;
-  font-size: var(--t-lead);
+  padding: 12px 6px;
+  font-size: var(--t-body);
   font-weight: 700;
   text-decoration: none;
   color: var(--ink);
   border-bottom: 2px solid var(--line);
 }
-.nav-mobile a:last-child {
+.nav-panel a:last-child {
   border-bottom: none;
+}
+.nav-panel a:hover {
+  color: var(--green-deep);
+}
+
+/* The header call to action. Never inherits a link colour from a nav rule —
+   that is how it ended up as dark ink on dark green. */
+.nav-cta {
+  min-height: 52px;
+  padding: 10px 20px;
+  font-size: var(--t-small);
+  color: #ffffff;
+}
+.nav-cta:hover,
+.nav-cta:focus {
+  color: #ffffff;
+}
+
+@media (max-width: 520px) {
+  .nav-menu {
+    position: static;
+  }
+  .nav-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: auto;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
 }
 
 .site-footer {

@@ -4,6 +4,7 @@ import { ctx } from "~/lib/loader";
 import { requireUser } from "~/lib/auth";
 import { newId } from "~/lib/ids";
 import { clampText, toCount, formatPhone, normalizePhone } from "~/lib/validate";
+import { findLikelyMatches } from "~/lib/matching";
 
 export async function loader({ context, request, params }: LoaderFunctionArgs) {
   const { env } = ctx(context);
@@ -39,11 +40,71 @@ export async function loader({ context, request, params }: LoaderFunctionArgs) {
     throw new Response("That household is not in your records.", { status: 404 });
   }
 
+  // Anyone this record might be a duplicate of. Offered, never acted on.
+  const others = await env.DB.prepare(
+    `SELECT id, first_name, last_name, phone, email, dob, address_line, visit_count
+       FROM contacts
+      WHERE org_id = ? AND id <> ? AND archived_at IS NULL AND merged_into IS NULL
+        AND ((? <> '' AND phone = ?) OR (? <> '' AND dob = ?) OR lower(last_name) LIKE ?)
+      LIMIT 40`,
+  )
+    .bind(
+      user.orgId,
+      params.id,
+      String(person.phone ?? ""),
+      String(person.phone ?? ""),
+      String(person.dob ?? ""),
+      String(person.dob ?? ""),
+      `${String(person.last_name ?? "").slice(0, 3).toLowerCase()}%`,
+    )
+    .all<{
+      id: string;
+      first_name: string;
+      last_name: string;
+      phone: string | null;
+      email: string | null;
+      dob: string | null;
+      address_line: string | null;
+      visit_count: number;
+    }>();
+
+  const possibleDuplicates = findLikelyMatches(
+    {
+      id: String(person.id),
+      firstName: String(person.first_name ?? ""),
+      lastName: String(person.last_name ?? ""),
+      phone: person.phone as string | null,
+      email: person.email as string | null,
+      dob: person.dob as string | null,
+      addressLine: person.address_line as string | null,
+    },
+    (others.results ?? []).map((row) => ({
+      id: row.id,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      phone: row.phone,
+      email: row.email,
+      dob: row.dob,
+      addressLine: row.address_line,
+    })),
+  ).slice(0, 4);
+
+  const byId = new Map((others.results ?? []).map((r) => [r.id, r]));
+
   return {
     person,
     visits: visits.results ?? [],
     events: events.results ?? [],
     canEdit: user.role !== "volunteer",
+    duplicates: possibleDuplicates.map((m) => {
+      const row = byId.get(m.id)!;
+      return {
+        id: m.id,
+        name: `${row.first_name} ${row.last_name}`.trim(),
+        visitCount: row.visit_count,
+        reasons: m.reasons,
+      };
+    }),
   };
 }
 
@@ -120,6 +181,74 @@ export async function action({ context, request, params }: ActionFunctionArgs) {
     return { saved: "Saved." };
   }
 
+  if (intent === "merge") {
+    const otherId = String(form.get("otherId") ?? "");
+    if (otherId === params.id) {
+      return { error: "That is the same record." };
+    }
+
+    const [keep, drop] = await Promise.all([
+      env.DB.prepare(
+        "SELECT id, first_name, last_name FROM contacts WHERE id = ? AND org_id = ?",
+      )
+        .bind(params.id, user.orgId)
+        .first<{ id: string; first_name: string; last_name: string }>(),
+      env.DB.prepare(
+        "SELECT id, first_name, last_name FROM contacts WHERE id = ? AND org_id = ? AND merged_into IS NULL",
+      )
+        .bind(otherId, user.orgId)
+        .first<{ id: string; first_name: string; last_name: string }>(),
+    ]);
+    if (!keep || !drop) {
+      return { error: "One of those records is no longer there. Try again." };
+    }
+
+    // Visits move across, so nothing that was already counted disappears from
+    // a quarter somebody has filed. The losing record is emptied and left
+    // pointing here rather than deleted, so a person opening an old link sees
+    // where the household went instead of a dead end.
+    await env.DB.batch([
+      env.DB.prepare(
+        "UPDATE visits SET contact_id = ? WHERE contact_id = ? AND org_id = ?",
+      ).bind(keep.id, drop.id, user.orgId),
+      env.DB.prepare(
+        "UPDATE signups SET contact_id = ? WHERE contact_id = ? AND org_id = ?",
+      ).bind(keep.id, drop.id, user.orgId),
+      env.DB.prepare(
+        "UPDATE lots SET source_contact_id = ? WHERE source_contact_id = ? AND org_id = ?",
+      ).bind(keep.id, drop.id, user.orgId),
+      env.DB.prepare(
+        `UPDATE contacts
+            SET merged_into = ?, archived_at = datetime('now'),
+                phone = NULL, email = NULL, card_code = NULL, unsub_token = NULL,
+                notes = COALESCE(notes, '') || ' (merged into another record)'
+          WHERE id = ? AND org_id = ?`,
+      ).bind(keep.id, drop.id, user.orgId),
+      env.DB.prepare(
+        `UPDATE contacts
+            SET visit_count = (SELECT COUNT(*) FROM visits WHERE contact_id = ?),
+                first_visit_at = (SELECT MIN(visited_at) FROM visits WHERE contact_id = ?),
+                last_visit_at = (SELECT MAX(visited_at) FROM visits WHERE contact_id = ?)
+          WHERE id = ? AND org_id = ?`,
+      ).bind(keep.id, keep.id, keep.id, keep.id, user.orgId),
+      env.DB.prepare(
+        `INSERT INTO events (id, org_id, kind, subject_id, summary, actor_user_id)
+         VALUES (?, ?, 'neighbors_merged', ?, ?, ?)`,
+      ).bind(
+        newId("evt"),
+        user.orgId,
+        keep.id,
+        `${drop.first_name} ${drop.last_name}`.trim() +
+          " was the same household and their visits were moved here",
+        user.id,
+      ),
+    ]);
+
+    return {
+      saved: `Joined. Every visit recorded against ${`${drop.first_name} ${drop.last_name}`.trim()} is now on this record, and your report totals are unchanged.`,
+    };
+  }
+
   if (intent === "forget") {
     // Somebody asked to be removed. Their details go; the counts that past
     // reports were built on stay correct.
@@ -154,7 +283,8 @@ function when(sqlDate: string): string {
 }
 
 export default function NeighborDetail() {
-  const { person, visits, events, canEdit } = useLoaderData<typeof loader>();
+  const { person, visits, events, canEdit, duplicates } =
+    useLoaderData<typeof loader>();
   const result = useActionData<{ saved?: string; error?: string }>();
   const navigation = useNavigation();
   const [params] = useSearchParams();
@@ -172,6 +302,16 @@ export default function NeighborDetail() {
       <h1>
         {str("first_name")} {str("last_name")}
       </h1>
+
+      {str("merged_into") && (
+        <p className="warn-line">
+          This household was joined into another record.{" "}
+          <Link to={`/app/neighbors/${str("merged_into")}`}>
+            Open the record their visits moved to
+          </Link>
+          .
+        </p>
+      )}
 
       {justAdded && (
         <p className="form-ok" role="status">
@@ -224,6 +364,64 @@ export default function NeighborDetail() {
             Record a visit today
           </button>
         </Form>
+      )}
+
+      {canEdit && duplicates.length > 0 && !str("archived_at") && (
+        <div className="card" style={{ borderColor: "var(--gold)" }}>
+          <h2 style={{ fontSize: "var(--t-h3)", color: "var(--warn)" }}>
+            Is one of these the same household?
+          </h2>
+          <p style={{ marginTop: 10 }}>
+            Laevo will never join two records on its own. Have a look, and if
+            it is the same family, join them — every visit moves onto this
+            record and your report totals stay exactly the same.
+          </p>
+
+          <div className="stack" style={{ marginTop: 16 }}>
+            {duplicates.map((other) => (
+              <div
+                key={other.id}
+                style={{
+                  borderTop: "2px solid var(--line)",
+                  paddingTop: 16,
+                }}
+              >
+                <p style={{ fontWeight: 700 }}>{other.name}</p>
+                <p className="small" style={{ marginTop: 4 }}>
+                  {other.visitCount}{" "}
+                  {other.visitCount === 1 ? "visit" : "visits"} recorded ·{" "}
+                  {other.reasons.join(", ")}
+                </p>
+                <div className="btn-row" style={{ marginTop: 12 }}>
+                  <Link
+                    className="btn btn-secondary"
+                    to={`/app/neighbors/${other.id}`}
+                  >
+                    Open their record
+                  </Link>
+                  <Form
+                    method="post"
+                    onSubmit={(e) => {
+                      if (
+                        !confirm(
+                          `Join ${other.name} into this record? Their visits move here. This cannot be undone.`,
+                        )
+                      ) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
+                    <input type="hidden" name="intent" value="merge" />
+                    <input type="hidden" name="otherId" value={other.id} />
+                    <button type="submit" className="btn btn-primary">
+                      Same household — join them
+                    </button>
+                  </Form>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="card">

@@ -236,7 +236,7 @@ export default function Today() {
               <span>
                 Reports
                 <span className="row-sub">
-                  Household and individual counts, with the working shown
+                  TEFAP, CSFP, state, food bank and grant figures
                 </span>
               </span>
               <span className="chev" aria-hidden="true">
@@ -245,22 +245,11 @@ export default function Today() {
             </Link>
           </li>
           <li>
-            <Link className="row-link" to="/app/switch">
+            <Link className="row-link" to="/app/more">
               <span>
-                Bring in records from another system
-                <span className="row-sub">Upload a CSV and check the columns</span>
-              </span>
-              <span className="chev" aria-hidden="true">
-                ›
-              </span>
-            </Link>
-          </li>
-          <li>
-            <Link className="row-link" to="/app/settings">
-              <span>
-                Settings
+                Everything else
                 <span className="row-sub">
-                  Your pantry, your team, your export
+                  Moving in, locations, where the food came from, settings
                 </span>
               </span>
               <span className="chev" aria-hidden="true">

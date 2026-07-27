@@ -9,7 +9,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   const { env } = ctx(context);
   const user = await requireUser(env, request);
 
-  const [items, sources] = await Promise.all([
+  const [items, sources, sites] = await Promise.all([
     env.DB.prepare(
       `SELECT id, name, unit, category FROM items
         WHERE org_id = ? AND archived_at IS NULL ORDER BY category, name`,
@@ -23,11 +23,17 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     )
       .bind(user.orgId)
       .all<{ source_note: string }>(),
+    env.DB.prepare(
+      "SELECT id, name FROM sites WHERE org_id = ? AND archived_at IS NULL ORDER BY created_at",
+    )
+      .bind(user.orgId)
+      .all<{ id: string; name: string }>(),
   ]);
 
   return {
     items: items.results ?? [],
     sources: (sources.results ?? []).map((s) => s.source_note),
+    sites: sites.results ?? [],
   };
 }
 
@@ -55,11 +61,16 @@ export async function action({ context, request }: ActionFunctionArgs) {
     .first<{ name: string; unit: string }>();
   if (!item) return { error: "We could not find that item on your shelf." };
 
-  const site = await env.DB.prepare(
-    "SELECT id FROM sites WHERE org_id = ? ORDER BY created_at LIMIT 1",
-  )
-    .bind(user.orgId)
-    .first<{ id: string }>();
+  const chosenSite = clampText(form.get("siteId"), 40);
+  const site = chosenSite
+    ? await env.DB.prepare("SELECT id FROM sites WHERE id = ? AND org_id = ?")
+        .bind(chosenSite, user.orgId)
+        .first<{ id: string }>()
+    : await env.DB.prepare(
+        "SELECT id FROM sites WHERE org_id = ? AND archived_at IS NULL ORDER BY created_at LIMIT 1",
+      )
+        .bind(user.orgId)
+        .first<{ id: string }>();
 
   await env.DB.batch([
     env.DB.prepare(
@@ -92,7 +103,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
 }
 
 export default function Receive() {
-  const { items, sources } = useLoaderData<typeof loader>();
+  const { items, sources, sites } = useLoaderData<typeof loader>();
   const result = useActionData<{ saved?: string; error?: string }>();
   const navigation = useNavigation();
 
@@ -145,6 +156,19 @@ export default function Receive() {
               ))}
             </select>
           </div>
+
+          {sites.length > 1 && (
+            <div className="field">
+              <label htmlFor="siteId">Which location?</label>
+              <select id="siteId" name="siteId">
+                {sites.map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {site.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="quantity">How much?</label>
