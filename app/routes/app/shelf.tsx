@@ -9,7 +9,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   const { env } = ctx(context);
   const user = await requireUser(env, request);
 
-  const [items, expiring] = await Promise.all([
+  const [items, expiring, recent] = await Promise.all([
     env.DB.prepare(
       `SELECT i.id, i.name, i.category, i.unit, i.min_par,
               COALESCE(SUM(l.quantity), 0) AS on_hand,
@@ -39,11 +39,29 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     )
       .bind(user.orgId)
       .all<{ name: string; unit: string; quantity: number; expires_at: string }>(),
+    env.DB.prepare(
+      `SELECT l.id, l.quantity, l.received_at, l.expires_at, l.source_note,
+              i.name AS item_name, i.unit
+         FROM lots l JOIN items i ON i.id = l.item_id
+        WHERE l.org_id = ?
+        ORDER BY l.received_at DESC LIMIT 12`,
+    )
+      .bind(user.orgId)
+      .all<{
+        id: string;
+        quantity: number;
+        received_at: string;
+        expires_at: string | null;
+        source_note: string | null;
+        item_name: string;
+        unit: string;
+      }>(),
   ]);
 
   return {
     items: items.results ?? [],
     expiring: expiring.results ?? [],
+    recent: recent.results ?? [],
     canEdit: user.role !== "volunteer",
   };
 }
@@ -73,6 +91,87 @@ export async function action({ context, request }: ActionFunctionArgs) {
     return { saved: `${name} added to the shelf.` };
   }
 
+  if (intent === "edit-item") {
+    const itemId = String(form.get("itemId") ?? "");
+    const name = clampText(form.get("name"), 120);
+    if (!name) return { error: "An item needs a name." };
+    await env.DB.prepare(
+      `UPDATE items SET name = ?, category = ?, unit = ?, min_par = ?
+        WHERE id = ? AND org_id = ?`,
+    )
+      .bind(
+        name,
+        clampText(form.get("category"), 60) || "Other",
+        clampText(form.get("unit"), 30) || "cans",
+        toQuantity(form.get("minPar"), 100000),
+        itemId,
+        user.orgId,
+      )
+      .run();
+    return { saved: "Saved." };
+  }
+
+  if (intent === "archive-item" || intent === "restore-item") {
+    const itemId = String(form.get("itemId") ?? "");
+    const archiving = intent === "archive-item";
+    // Archived rather than deleted: the deliveries and hand-outs recorded
+    // against it are part of a quarter somebody may already have filed.
+    await env.DB.prepare(
+      `UPDATE items SET archived_at = ${archiving ? "datetime('now')" : "NULL"}
+        WHERE id = ? AND org_id = ?`,
+    )
+      .bind(itemId, user.orgId)
+      .run();
+    return {
+      saved: archiving
+        ? "Taken off the shelf list. Its history is untouched."
+        : "Back on the shelf list.",
+      undo: archiving
+        ? { intent: "restore-item", id: itemId }
+        : { intent: "archive-item", id: itemId },
+    };
+  }
+
+  if (intent === "edit-lot") {
+    const lotId = String(form.get("lotId") ?? "");
+    await env.DB.prepare(
+      `UPDATE lots SET quantity = ?, expires_at = ? WHERE id = ? AND org_id = ?`,
+    )
+      .bind(
+        toQuantity(form.get("quantity"), 1000000),
+        clampText(form.get("expiresAt"), 10) || null,
+        lotId,
+        user.orgId,
+      )
+      .run();
+    return { saved: "Delivery corrected." };
+  }
+
+  if (intent === "delete-lot") {
+    const lotId = String(form.get("lotId") ?? "");
+    await env.DB.prepare("DELETE FROM lots WHERE id = ? AND org_id = ?")
+      .bind(lotId, user.orgId)
+      .run();
+    return { saved: "Delivery removed." };
+  }
+
+  if (intent === "undo-count") {
+    // Put back exactly what was on the shelf before the recount replaced it.
+    const itemId = String(form.get("itemId") ?? "");
+    const previous = toQuantity(form.get("previous"), 1000000);
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM lots WHERE item_id = ? AND org_id = ?").bind(
+        itemId,
+        user.orgId,
+      ),
+      env.DB.prepare(
+        `INSERT INTO lots (id, org_id, item_id, quantity, received_at, source_note)
+         VALUES (?, ?, ?, ?, datetime('now'), 'Count undone')`,
+      ).bind(newId("lot"), user.orgId, itemId, previous),
+    ]);
+    return { saved: "Put back to what it was." };
+  }
+
   if (intent === "adjust") {
     const itemId = String(form.get("itemId") ?? "");
     const quantity = toQuantity(form.get("quantity"), 1000000);
@@ -82,6 +181,12 @@ export async function action({ context, request }: ActionFunctionArgs) {
       .bind(itemId, user.orgId)
       .first<{ name: string; unit: string }>();
     if (!item) return { error: "We could not find that item." };
+
+    const before = await env.DB.prepare(
+      "SELECT COALESCE(SUM(quantity), 0) AS on_hand FROM lots WHERE item_id = ? AND org_id = ?",
+    )
+      .bind(itemId, user.orgId)
+      .first<{ on_hand: number }>();
 
     // A recount replaces the lots rather than adjusting them: what somebody
     // counted on the shelf just now is more true than our arithmetic.
@@ -105,7 +210,10 @@ export async function action({ context, request }: ActionFunctionArgs) {
         user.id,
       ),
     ]);
-    return { saved: `${item.name} is now ${quantity} ${item.unit}.` };
+    return {
+      saved: `${item.name} is now ${quantity} ${item.unit}.`,
+      undoCount: { itemId, previous: before?.on_hand ?? 0 },
+    };
   }
 
   return { error: "We did not understand that." };
@@ -126,8 +234,13 @@ function expiryWords(days: number): string {
 }
 
 export default function Shelf() {
-  const { items, expiring, canEdit } = useLoaderData<typeof loader>();
-  const result = useActionData<{ saved?: string; error?: string }>();
+  const { items, expiring, recent, canEdit } = useLoaderData<typeof loader>();
+  const result = useActionData<{
+    saved?: string;
+    error?: string;
+    undo?: { intent: string; id: string };
+    undoCount?: { itemId: string; previous: number };
+  }>();
   const navigation = useNavigation();
 
   const categories = [...new Set(items.map((i) => i.category))];
@@ -137,9 +250,32 @@ export default function Shelf() {
       <h1>The shelf</h1>
 
       {result?.saved && (
-        <p className="form-ok" role="status">
-          {result.saved}
-        </p>
+        <div className="undo-bar" role="status">
+          <span>{result.saved}</span>
+          {result.undoCount && (
+            <Form method="post">
+              <input type="hidden" name="intent" value="undo-count" />
+              <input type="hidden" name="itemId" value={result.undoCount.itemId} />
+              <input
+                type="hidden"
+                name="previous"
+                value={result.undoCount.previous}
+              />
+              <button type="submit" className="btn btn-secondary">
+                Undo
+              </button>
+            </Form>
+          )}
+          {result.undo && (
+            <Form method="post">
+              <input type="hidden" name="intent" value={result.undo.intent} />
+              <input type="hidden" name="itemId" value={result.undo.id} />
+              <button type="submit" className="btn btn-secondary">
+                Undo
+              </button>
+            </Form>
+          )}
+        </div>
       )}
       {result?.error && (
         <p className="form-error" role="alert">
@@ -224,18 +360,11 @@ export default function Shelf() {
                       )}
 
                       {canEdit && (
-                        <Form method="post" style={{ marginTop: 14 }}>
-                          <input type="hidden" name="intent" value="adjust" />
-                          <input type="hidden" name="itemId" value={item.id} />
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: 12,
-                              alignItems: "flex-end",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <div className="field" style={{ flex: "1 1 140px", marginBottom: 0 }}>
+                        <>
+                          <Form method="post" className="inline-form" style={{ marginTop: 14 }}>
+                            <input type="hidden" name="intent" value="adjust" />
+                            <input type="hidden" name="itemId" value={item.id} />
+                            <div className="field">
                               <label htmlFor={`q-${item.id}`}>
                                 Counted on the shelf
                               </label>
@@ -255,8 +384,71 @@ export default function Shelf() {
                             >
                               Save count
                             </button>
-                          </div>
-                        </Form>
+                          </Form>
+
+                          <details style={{ marginTop: 12 }}>
+                            <summary className="btn btn-quiet">
+                              Change this item
+                            </summary>
+                            <Form method="post" style={{ marginTop: 16 }}>
+                              <input type="hidden" name="intent" value="edit-item" />
+                              <input type="hidden" name="itemId" value={item.id} />
+                              <div className="field">
+                                <label htmlFor={`in-${item.id}`}>What is it?</label>
+                                <input type="text"
+                                  id={`in-${item.id}`}
+                                  name="name"
+                                  defaultValue={item.name}
+                                />
+                              </div>
+                              <div className="field">
+                                <label htmlFor={`ic-${item.id}`}>Shelf</label>
+                                <input type="text"
+                                  id={`ic-${item.id}`}
+                                  name="category"
+                                  defaultValue={item.category}
+                                />
+                              </div>
+                              <div className="field">
+                                <label htmlFor={`iu-${item.id}`}>
+                                  How you count it
+                                </label>
+                                <input type="text"
+                                  id={`iu-${item.id}`}
+                                  name="unit"
+                                  defaultValue={item.unit}
+                                />
+                              </div>
+                              <div className="field">
+                                <label htmlFor={`ip-${item.id}`}>
+                                  How much you like to keep
+                                </label>
+                                <input
+                                  id={`ip-${item.id}`}
+                                  name="minPar"
+                                  type="number"
+                                  min={0}
+                                  defaultValue={Math.round(item.min_par)}
+                                />
+                              </div>
+                              <button type="submit" className="btn btn-primary btn-block">
+                                Save
+                              </button>
+                            </Form>
+
+                            <Form method="post" style={{ marginTop: 20 }}>
+                              <input type="hidden" name="intent" value="archive-item" />
+                              <input type="hidden" name="itemId" value={item.id} />
+                              <button type="submit" className="btn btn-danger btn-block">
+                                Take off the shelf list
+                              </button>
+                              <p className="small" style={{ marginTop: 8 }}>
+                                For something you no longer stock. Its history
+                                stays, and you can undo it straight away.
+                              </p>
+                            </Form>
+                          </details>
+                        </>
                       )}
                     </div>
                   );
@@ -264,6 +456,77 @@ export default function Shelf() {
             </div>
           </div>
         ))
+      )}
+
+      {recent.length > 0 && canEdit && (
+        <details className="card">
+          <summary className="btn btn-secondary btn-block">
+            Recent deliveries — fix a mistake
+          </summary>
+          <p className="small" style={{ marginTop: 14 }}>
+            The last dozen. Wrong number typed, or recorded twice? Correct it
+            here rather than counting the whole shelf again.
+          </p>
+          <div className="stack" style={{ marginTop: 16 }}>
+            {recent.map((lot) => (
+              <div
+                key={lot.id}
+                style={{ borderTop: "2px solid var(--line)", paddingTop: 14 }}
+              >
+                <p style={{ fontWeight: 700 }}>
+                  {Math.round(lot.quantity)} {lot.unit} of {lot.item_name}
+                </p>
+                <p className="small">
+                  {lot.received_at.slice(0, 10)}
+                  {lot.source_note ? ` · ${lot.source_note}` : ""}
+                </p>
+                <Form method="post" className="inline-form" style={{ marginTop: 10 }}>
+                  <input type="hidden" name="intent" value="edit-lot" />
+                  <input type="hidden" name="lotId" value={lot.id} />
+                  <div className="field">
+                    <label htmlFor={`lq-${lot.id}`}>How much</label>
+                    <input
+                      id={`lq-${lot.id}`}
+                      name="quantity"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="any"
+                      defaultValue={lot.quantity}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor={`ld-${lot.id}`}>Date on the box</label>
+                    <input
+                      id={`ld-${lot.id}`}
+                      name="expiresAt"
+                      type="date"
+                      defaultValue={lot.expires_at?.slice(0, 10) ?? ""}
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-secondary">
+                    Correct it
+                  </button>
+                </Form>
+                <Form
+                  method="post"
+                  style={{ marginTop: 10 }}
+                  onSubmit={(e) => {
+                    if (!confirm("Remove this delivery from the shelf?")) {
+                      e.preventDefault();
+                    }
+                  }}
+                >
+                  <input type="hidden" name="intent" value="delete-lot" />
+                  <input type="hidden" name="lotId" value={lot.id} />
+                  <button type="submit" className="btn btn-quiet">
+                    Remove this delivery
+                  </button>
+                </Form>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       {canEdit && (

@@ -73,6 +73,13 @@ const ITEMS: Array<[string, string, string, number]> = [
   ["Dish soap", "Household", "bottles", 12],
 ];
 
+const SOURCES = [
+  "Greater Cleveland Food Bank",
+  "Heinen's on Detroit",
+  "Neighborhood food drive",
+  "Individual donation",
+];
+
 const SHIFT_TITLES = [
   "Saturday distribution",
   "Tuesday evening distribution",
@@ -315,6 +322,23 @@ export async function seedDemo(env: Env): Promise<string> {
     );
   }
 
+  // ---- Where the food comes from -----------------------------------------
+  const sourceIds = SOURCES.map(() => newId("don"));
+  SOURCES.forEach((name, i) => {
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO contacts (id, org_id, roles, first_name, last_name, notes, created_at)
+         VALUES (?, ?, 'donor', '', ?, ?, ?)`,
+      ).bind(
+        sourceIds[i],
+        orgId,
+        name,
+        i === 1 ? "Ask for the produce manager before 9am." : null,
+        daysAgo(200),
+      ),
+    );
+  });
+
   // ---- The shelf ---------------------------------------------------------
   ITEMS.forEach(([name, category, unit, par], i) => {
     const itemId = newId("itm");
@@ -336,10 +360,11 @@ export async function seedDemo(env: Env): Promise<string> {
         : perishable
           ? 10 + Math.floor(random() * 20)
           : 120 + Math.floor(random() * 500);
+      const sourceIndex = Math.floor(random() * SOURCES.length);
       statements.push(
         env.DB.prepare(
-          `INSERT INTO lots (id, org_id, item_id, site_id, quantity, received_at, expires_at, source_note)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO lots (id, org_id, item_id, site_id, quantity, received_at, expires_at, source_contact_id, source_note)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).bind(
           newId("lot"),
           orgId,
@@ -348,9 +373,8 @@ export async function seedDemo(env: Env): Promise<string> {
           Math.round(par * (0.3 + random() * 1.4)),
           daysAgo(Math.floor(random() * 30)),
           daysAhead(expiresIn).slice(0, 10),
-          ["Greater Cleveland Food Bank", "Heinen's on Detroit", "Neighborhood food drive", "Individual donation"][
-            Math.floor(random() * 4)
-          ],
+          sourceIds[sourceIndex],
+          SOURCES[sourceIndex],
         ),
       );
     }

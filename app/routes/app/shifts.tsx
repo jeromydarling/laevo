@@ -98,6 +98,68 @@ export async function action({ context, request }: ActionFunctionArgs) {
     return { saved: `${title} added to the rota.` };
   }
 
+  if (intent === "edit-shift") {
+    const shiftId = String(form.get("shiftId") ?? "");
+    const title = clampText(form.get("title"), 120);
+    const date = clampText(form.get("date"), 10);
+    const start = clampText(form.get("start"), 5) || "09:00";
+    const end = clampText(form.get("end"), 5) || "12:00";
+    if (!title || !date) return { error: "A shift needs a name and a date." };
+    await env.DB.prepare(
+      `UPDATE shifts SET title = ?, starts_at = ?, ends_at = ?, slots = ?, note = ?
+        WHERE id = ? AND org_id = ?`,
+    )
+      .bind(
+        title,
+        `${date} ${start}:00`,
+        `${date} ${end}:00`,
+        toCount(form.get("slots"), 200) || 4,
+        clampText(form.get("note"), 400) || null,
+        shiftId,
+        user.orgId,
+      )
+      .run();
+    return {
+      saved:
+        "Saved. Anybody already signed up keeps their place — tell them yourself if the time moved.",
+    };
+  }
+
+  if (intent === "delete-shift") {
+    const shiftId = String(form.get("shiftId") ?? "");
+    const signups = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM signups WHERE shift_id = ? AND org_id = ? AND status = 'coming'",
+    )
+      .bind(shiftId, user.orgId)
+      .first<{ n: number }>();
+    if ((signups?.n ?? 0) > 0) {
+      return {
+        error:
+          "Somebody is signed up for that one. Take them off first, so nobody turns up to a shift that is not happening.",
+      };
+    }
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM signups WHERE shift_id = ? AND org_id = ?").bind(
+        shiftId,
+        user.orgId,
+      ),
+      env.DB.prepare("DELETE FROM shifts WHERE id = ? AND org_id = ?").bind(
+        shiftId,
+        user.orgId,
+      ),
+    ]);
+    return { saved: "Taken off the rota." };
+  }
+
+  if (intent === "restore-signup") {
+    await env.DB.prepare(
+      "UPDATE signups SET status = 'coming' WHERE id = ? AND org_id = ?",
+    )
+      .bind(String(form.get("signupId") ?? ""), user.orgId)
+      .run();
+    return { saved: "Back on the rota." };
+  }
+
   if (intent === "attendance") {
     // Marking who came is also how hours get logged, because asking a
     // coordinator to do those as two separate jobs means the second one never
@@ -119,7 +181,10 @@ export async function action({ context, request }: ActionFunctionArgs) {
     )
       .bind(String(form.get("signupId") ?? ""), user.orgId)
       .run();
-    return { saved: "Taken off the rota." };
+    return {
+      saved: "Taken off the rota.",
+      undoSignupId: String(form.get("signupId") ?? ""),
+    };
   }
 
   return { error: "We did not understand that." };
@@ -142,7 +207,11 @@ export default function Shifts() {
   const { shifts, signups, publicLink, canEdit, hoursThisYear, sessionsThisYear } =
     useLoaderData<typeof loader>();
   const now = Date.now();
-  const result = useActionData<{ saved?: string; error?: string }>();
+  const result = useActionData<{
+    saved?: string;
+    error?: string;
+    undoSignupId?: string;
+  }>();
   const navigation = useNavigation();
 
   return (
@@ -150,9 +219,18 @@ export default function Shifts() {
       <h1>The rota</h1>
 
       {result?.saved && (
-        <p className="form-ok" role="status">
-          {result.saved}
-        </p>
+        <div className="undo-bar" role="status">
+          <span>{result.saved}</span>
+          {result.undoSignupId && (
+            <Form method="post">
+              <input type="hidden" name="intent" value="restore-signup" />
+              <input type="hidden" name="signupId" value={result.undoSignupId} />
+              <button type="submit" className="btn btn-secondary">
+                Undo
+              </button>
+            </Form>
+          )}
+        </div>
       )}
       {result?.error && (
         <p className="form-error" role="alert">
@@ -246,6 +324,98 @@ export default function Shifts() {
                   <p className="small" style={{ marginTop: 8 }}>
                     {shift.note}
                   </p>
+                )}
+
+                {canEdit && (
+                  <details style={{ marginTop: 14 }}>
+                    <summary className="btn btn-quiet">Change this shift</summary>
+                    <Form method="post" style={{ marginTop: 16 }}>
+                      <input type="hidden" name="intent" value="edit-shift" />
+                      <input type="hidden" name="shiftId" value={shift.id} />
+                      <div className="field">
+                        <label htmlFor={`st-${shift.id}`}>What is it?</label>
+                        <input type="text"
+                          id={`st-${shift.id}`}
+                          name="title"
+                          defaultValue={shift.title}
+                        />
+                      </div>
+                      <div className="field">
+                        <label htmlFor={`sd-${shift.id}`}>Which day?</label>
+                        <input
+                          id={`sd-${shift.id}`}
+                          name="date"
+                          type="date"
+                          defaultValue={shift.starts_at.slice(0, 10)}
+                        />
+                      </div>
+                      <div className="grid grid-2">
+                        <div className="field">
+                          <label htmlFor={`ss-${shift.id}`}>Starts</label>
+                          <input
+                            id={`ss-${shift.id}`}
+                            name="start"
+                            type="time"
+                            defaultValue={shift.starts_at.slice(11, 16)}
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor={`se-${shift.id}`}>Ends</label>
+                          <input
+                            id={`se-${shift.id}`}
+                            name="end"
+                            type="time"
+                            defaultValue={shift.ends_at.slice(11, 16)}
+                          />
+                        </div>
+                      </div>
+                      <div className="field">
+                        <label htmlFor={`sl-${shift.id}`}>
+                          How many people do you need?
+                        </label>
+                        <input
+                          id={`sl-${shift.id}`}
+                          name="slots"
+                          type="number"
+                          min={1}
+                          defaultValue={shift.slots}
+                        />
+                      </div>
+                      <div className="field">
+                        <label htmlFor={`sn-${shift.id}`}>
+                          Anything they should know
+                        </label>
+                        <input type="text"
+                          id={`sn-${shift.id}`}
+                          name="note"
+                          defaultValue={shift.note ?? ""}
+                        />
+                      </div>
+                      <button type="submit" className="btn btn-primary btn-block">
+                        Save
+                      </button>
+                    </Form>
+
+                    <Form
+                      method="post"
+                      style={{ marginTop: 20 }}
+                      onSubmit={(e) => {
+                        if (!confirm("Take this shift off the rota?")) {
+                          e.preventDefault();
+                        }
+                      }}
+                    >
+                      <input type="hidden" name="intent" value="delete-shift" />
+                      <input type="hidden" name="shiftId" value={shift.id} />
+                      <button type="submit" className="btn btn-danger btn-block">
+                        Take this shift off the rota
+                      </button>
+                      <p className="small" style={{ marginTop: 8 }}>
+                        Only possible while nobody is signed up, so nobody turns
+                        up to a shift that is not happening.
+                      </p>
+                    </Form>
+                  </details>
                 )}
 
                 {people.length > 0 && (

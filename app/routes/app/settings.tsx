@@ -77,7 +77,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "");
 
-  const adminOnly = ["org", "invite", "remove"];
+  const adminOnly = ["org", "invite", "remove", "role"];
   if (adminOnly.includes(intent) && user.role !== "admin") {
     return {
       error:
@@ -148,6 +148,24 @@ export async function action({ context, request }: ActionFunctionArgs) {
           ? `Invitation sent to ${email.value}.`
           : `Invitation created. Email is not switched on yet, so send them this link yourself: ${env.SITE_URL}/join/${token}`,
     };
+  }
+
+  if (intent === "role") {
+    const userId = String(form.get("userId") ?? "");
+    const role = clampText(form.get("role"), 20);
+    if (!["admin", "staff", "volunteer"].includes(role)) {
+      return { error: "That is not one of the roles." };
+    }
+    if (userId === user.id) {
+      return {
+        error:
+          "You cannot change your own role — otherwise a pantry can lock itself out of its own settings. Ask another organizer.",
+      };
+    }
+    await env.DB.prepare("UPDATE users SET role = ? WHERE id = ? AND org_id = ?")
+      .bind(role, userId, user.orgId)
+      .run();
+    return { saved: "Saved. It applies the next time they load a page." };
   }
 
   if (intent === "remove") {
@@ -249,7 +267,7 @@ export default function Settings() {
 
           <div className="field" style={{ marginTop: 16 }}>
             <label htmlFor="name">Name</label>
-            <input id="name" name="name" defaultValue={data.org.name} />
+            <input type="text" id="name" name="name" defaultValue={data.org.name} />
           </div>
 
           <div className="field">
@@ -307,13 +325,50 @@ export default function Settings() {
                     </span>
                   </span>
                   {isAdmin && member.email !== data.me.email && (
-                    <Form method="post">
-                      <input type="hidden" name="intent" value="remove" />
-                      <input type="hidden" name="userId" value={member.id} />
-                      <button type="submit" className="btn btn-danger">
-                        Remove
-                      </button>
-                    </Form>
+                    <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <Form method="post" className="inline-form">
+                        <input type="hidden" name="intent" value="role" />
+                        <input type="hidden" name="userId" value={member.id} />
+                        <div className="field">
+                          <label
+                            htmlFor={`role-${member.id}`}
+                            className="visually-hidden"
+                          >
+                            What {member.name} can do
+                          </label>
+                          <select
+                            id={`role-${member.id}`}
+                            name="role"
+                            defaultValue={member.role}
+                          >
+                            <option value="volunteer">Volunteer</option>
+                            <option value="staff">Staff</option>
+                            <option value="admin">Organizer</option>
+                          </select>
+                        </div>
+                        <button type="submit" className="btn btn-secondary">
+                          Save
+                        </button>
+                      </Form>
+                      <Form
+                        method="post"
+                        onSubmit={(e) => {
+                          if (
+                            !confirm(
+                              `Remove ${member.name}? They are signed out everywhere immediately.`,
+                            )
+                          ) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <input type="hidden" name="intent" value="remove" />
+                        <input type="hidden" name="userId" value={member.id} />
+                        <button type="submit" className="btn btn-danger">
+                          Remove
+                        </button>
+                      </Form>
+                    </span>
                   )}
                 </div>
               </li>
@@ -335,7 +390,7 @@ export default function Settings() {
               <input type="hidden" name="intent" value="invite" />
               <div className="field">
                 <label htmlFor="inviteName">Their name</label>
-                <input id="inviteName" name="name" required />
+                <input type="text" id="inviteName" name="name" required />
               </div>
               <div className="field">
                 <label htmlFor="inviteEmail">Their email</label>
