@@ -144,7 +144,7 @@ export default function Locations() {
 
   return (
     <div className="wrap stack">
-      <p>
+      <p className="back-link">
         <Link to="/app/more">‹ Everything else</Link>
       </p>
       <h1>Locations</h1>
@@ -194,7 +194,7 @@ export default function Locations() {
                   <input type="hidden" name="siteId" value={site.id} />
                   <div className="field">
                     <label htmlFor={`name-${site.id}`}>Name</label>
-                    <input
+                    <input type="text"
                       id={`name-${site.id}`}
                       name="name"
                       defaultValue={site.name}
@@ -202,7 +202,7 @@ export default function Locations() {
                   </div>
                   <div className="field">
                     <label htmlFor={`address-${site.id}`}>Address</label>
-                    <input
+                    <input type="text"
                       id={`address-${site.id}`}
                       name="address"
                       defaultValue={site.address ?? ""}
@@ -213,7 +213,7 @@ export default function Locations() {
                     <span className="hint">
                       In your own words — "Saturdays 9 to noon" is perfect.
                     </span>
-                    <input
+                    <input type="text"
                       id={`hours-${site.id}`}
                       name="hours"
                       defaultValue={site.hours_note ?? ""}
@@ -254,15 +254,15 @@ export default function Locations() {
                 Whatever your volunteers call it. "The hall behind the library"
                 is a better name than "Site 2".
               </span>
-              <input id="new-name" name="name" required />
+              <input type="text" id="new-name" name="name" required />
             </div>
             <div className="field">
               <label htmlFor="new-address">Address</label>
-              <input id="new-address" name="address" />
+              <input type="text" id="new-address" name="address" />
             </div>
             <div className="field">
               <label htmlFor="new-hours">When it is open</label>
-              <input id="new-hours" name="hours" />
+              <input type="text" id="new-hours" name="hours" />
             </div>
             <button
               type="submit"

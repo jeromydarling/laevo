@@ -134,6 +134,13 @@ export async function action({ context, request }: ActionFunctionArgs) {
   const user = await requireUser(env, request);
   const form = await request.formData();
 
+  if (String(form.get("intent") ?? "") === "delete") {
+    await env.DB.prepare("DELETE FROM reports WHERE id = ? AND org_id = ?")
+      .bind(String(form.get("reportId") ?? ""), user.orgId)
+      .run();
+    return { saved: "Removed from the list. The figures themselves are still in your visits." };
+  }
+
   const program = clampText(form.get("program"), 30) || "STATE";
   const periodStart = clampText(form.get("from"), 10);
   const periodEnd = clampText(form.get("to"), 10);
@@ -179,7 +186,7 @@ export default function Reports() {
 
   return (
     <div className="wrap stack">
-      <p>
+      <p className="back-link">
         <Link to="/app/more">‹ Everything else</Link>
       </p>
       <h1>Reports</h1>
@@ -408,10 +415,27 @@ export default function Reports() {
           <h2 style={{ fontSize: "var(--t-h3)" }}>Reports you have kept</h2>
           <ul className="stack" style={{ listStyle: "none", marginTop: 14 }}>
             {data.saved.map((row) => (
-              <li key={row.id}>
-                <strong>{row.program}</strong> — {row.period_start} to{" "}
-                {row.period_end}
-                <span className="row-sub">Kept {when(row.created_at)}</span>
+              <li
+                key={row.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <span>
+                  <strong>{row.program}</strong> — {row.period_start} to{" "}
+                  {row.period_end}
+                  <span className="row-sub">Kept {when(row.created_at)}</span>
+                </span>
+                <Form method="post">
+                  <input type="hidden" name="intent" value="delete" />
+                  <input type="hidden" name="reportId" value={row.id} />
+                  <button type="submit" className="btn btn-quiet">
+                    Remove
+                  </button>
+                </Form>
               </li>
             ))}
           </ul>

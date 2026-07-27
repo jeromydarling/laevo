@@ -4,6 +4,7 @@ import { ctx } from "~/lib/loader";
 import { requireUser } from "~/lib/auth";
 import { newId } from "~/lib/ids";
 import { clampText, toQuantity } from "~/lib/validate";
+import { findOrCreateSource } from "~/lib/sources";
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const { env } = ctx(context);
@@ -17,12 +18,13 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
       .bind(user.orgId)
       .all<{ id: string; name: string; unit: string; category: string }>(),
     env.DB.prepare(
-      `SELECT DISTINCT source_note FROM lots
-        WHERE org_id = ? AND source_note IS NOT NULL AND source_note <> ''
-        ORDER BY source_note LIMIT 20`,
+      `SELECT id, last_name AS name FROM contacts
+        WHERE org_id = ? AND roles LIKE '%donor%'
+          AND archived_at IS NULL AND merged_into IS NULL
+        ORDER BY last_name LIMIT 100`,
     )
       .bind(user.orgId)
-      .all<{ source_note: string }>(),
+      .all<{ id: string; name: string }>(),
     env.DB.prepare(
       "SELECT id, name FROM sites WHERE org_id = ? AND archived_at IS NULL ORDER BY created_at",
     )
@@ -32,7 +34,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
   return {
     items: items.results ?? [],
-    sources: (sources.results ?? []).map((s) => s.source_note),
+    sources: sources.results ?? [],
     sites: sites.results ?? [],
   };
 }
@@ -42,10 +44,19 @@ export async function action({ context, request }: ActionFunctionArgs) {
   const user = await requireUser(env, request);
   const form = await request.formData();
 
+  if (String(form.get("intent") ?? "") === "undo") {
+    const lotId = String(form.get("lotId") ?? "");
+    await env.DB.prepare("DELETE FROM lots WHERE id = ? AND org_id = ?")
+      .bind(lotId, user.orgId)
+      .run();
+    return { saved: "Taken back off the shelf." };
+  }
+
   const itemId = String(form.get("itemId") ?? "");
   const quantity = toQuantity(form.get("quantity"), 1000000);
   const expiresAt = clampText(form.get("expiresAt"), 10);
-  const source = clampText(form.get("source"), 160);
+  const chosenSourceId = String(form.get("sourceId") ?? "");
+  const typedSource = clampText(form.get("source"), 160);
 
   if (!itemId || quantity <= 0) {
     return {
@@ -72,18 +83,33 @@ export async function action({ context, request }: ActionFunctionArgs) {
         .bind(user.orgId)
         .first<{ id: string }>();
 
+  // A chosen source wins; otherwise a typed name starts a new record, because
+  // the moment somebody is holding the delivery note is the moment they know.
+  let source: { id: string; name: string } | null = null;
+  if (chosenSourceId) {
+    source = await env.DB.prepare(
+      "SELECT id, last_name AS name FROM contacts WHERE id = ? AND org_id = ?",
+    )
+      .bind(chosenSourceId, user.orgId)
+      .first<{ id: string; name: string }>();
+  } else if (typedSource) {
+    source = await findOrCreateSource(env, user.orgId, typedSource);
+  }
+
+  const lotId = newId("lot");
   await env.DB.batch([
     env.DB.prepare(
-      `INSERT INTO lots (id, org_id, item_id, site_id, quantity, received_at, expires_at, source_note)
-       VALUES (?, ?, ?, ?, ?, datetime('now'), ?, ?)`,
+      `INSERT INTO lots (id, org_id, item_id, site_id, quantity, received_at, expires_at, source_contact_id, source_note)
+       VALUES (?, ?, ?, ?, ?, datetime('now'), ?, ?, ?)`,
     ).bind(
-      newId("lot"),
+      lotId,
       user.orgId,
       itemId,
       site?.id ?? null,
       quantity,
       expiresAt || null,
-      source || null,
+      source?.id ?? null,
+      source?.name ?? null,
     ),
     env.DB.prepare(
       `INSERT INTO events (id, org_id, kind, subject_id, summary, actor_user_id)
@@ -92,24 +118,30 @@ export async function action({ context, request }: ActionFunctionArgs) {
       newId("evt"),
       user.orgId,
       itemId,
-      `${quantity} ${item.unit} of ${item.name} received${source ? ` from ${source}` : ""}`,
+      `${quantity} ${item.unit} of ${item.name} received${source ? ` from ${source.name}` : ""}`,
       user.id,
     ),
   ]);
 
   return {
     saved: `${quantity} ${item.unit} of ${item.name} added to the shelf.`,
+    // Recorded against the wrong item or twice by mistake — one press away.
+    undoLotId: lotId,
   };
 }
 
 export default function Receive() {
   const { items, sources, sites } = useLoaderData<typeof loader>();
-  const result = useActionData<{ saved?: string; error?: string }>();
+  const result = useActionData<{
+    saved?: string;
+    error?: string;
+    undoLotId?: string;
+  }>();
   const navigation = useNavigation();
 
   return (
     <div className="wrap stack">
-      <p>
+      <p className="back-link">
         <Link to="/app/shelf">‹ The shelf</Link>
       </p>
       <h1>Record a delivery</h1>
@@ -119,9 +151,18 @@ export default function Receive() {
       </p>
 
       {result?.saved && (
-        <p className="form-ok" role="status">
-          {result.saved} Add the next one below, or go back to the shelf.
-        </p>
+        <div className="undo-bar" role="status">
+          <span>{result.saved}</span>
+          {result.undoLotId && (
+            <Form method="post">
+              <input type="hidden" name="intent" value="undo" />
+              <input type="hidden" name="lotId" value={result.undoLotId} />
+              <button type="submit" className="btn btn-secondary">
+                Undo
+              </button>
+            </Form>
+          )}
+        </div>
       )}
       {result?.error && (
         <p className="form-error" role="alert">
@@ -193,16 +234,27 @@ export default function Receive() {
           </div>
 
           <div className="field">
-            <label htmlFor="source">Where did it come from?</label>
+            <label htmlFor="sourceId">Where did it come from?</label>
             <span className="hint">
-              Optional. Useful at the end of the year when somebody asks.
+              Optional, and useful at the end of the year when somebody asks.
             </span>
-            <input id="source" name="source" type="text" list="sources" />
-            <datalist id="sources">
+            <select id="sourceId" name="sourceId" defaultValue="">
+              <option value="">Somewhere new, or not recorded</option>
               {sources.map((s) => (
-                <option key={s} value={s} />
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
               ))}
-            </datalist>
+            </select>
+          </div>
+
+          <div className="field">
+            <label htmlFor="source">…or type a new one</label>
+            <span className="hint">
+              Only used if you left the list above alone. It gets added to your
+              sources so it is there next time.
+            </span>
+            <input id="source" name="source" type="text" autoComplete="off" />
           </div>
 
           <button

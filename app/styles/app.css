@@ -468,12 +468,23 @@ section {
   margin-bottom: 8px;
 }
 
+/* Every text-like input, however it was written.
+   This list used to name a handful of types, which meant an <input> with no
+   type attribute at all — perfectly valid, behaves as text — rendered as a raw
+   browser box, and so did every <input type="time"> on the rota. Matching
+   :not([type]) and naming the rest closes both. */
+input:not([type]),
 input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="tel"],
 input[type="number"],
 input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="url"],
 input[type="search"],
 select,
 textarea {
@@ -504,6 +515,7 @@ select {
   padding-right: 48px;
 }
 
+input:not([type]):focus,
 input:focus,
 select:focus,
 textarea:focus {
@@ -514,6 +526,13 @@ textarea:focus {
 .field-error select,
 .field-error textarea {
   border-color: var(--danger);
+}
+/* Checkboxes and radios keep their own sizing, not the text-input box. */
+.check input[type="checkbox"],
+.check input[type="radio"] {
+  min-height: 0;
+  padding: 0;
+  border: none;
 }
 
 .error-text {
@@ -568,6 +587,123 @@ textarea:focus {
   width: 1px;
   height: 1px;
   overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Disclosure buttons, file inputs, and the other controls that were shipping
+   with the browser's own look showing through.
+   -------------------------------------------------------------------------- */
+
+/* A <summary> styled as a button still draws the browser's triangle marker and
+   still lays out as a list item, so these were arriving with a bullet stuck to
+   the left of the label. Both markers have to go — Safari uses its own. */
+summary.btn,
+summary.view-summary {
+  list-style: none;
+  cursor: pointer;
+}
+summary.btn::-webkit-details-marker,
+summary.view-summary::-webkit-details-marker {
+  display: none;
+}
+summary.btn::marker,
+summary.view-summary::marker {
+  content: "";
+}
+/* Its own affordance instead: a caret that turns when it opens. */
+summary.btn::after {
+  content: "";
+  width: 0;
+  height: 0;
+  margin-left: 4px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid currentColor;
+  flex: 0 0 auto;
+}
+details[open] > summary.btn::after {
+  transform: rotate(180deg);
+}
+
+/* File inputs are the single ugliest default control on the web, and this one
+   is the first thing a pantry touches when moving four years of records in. */
+input[type="file"] {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: max(16px, var(--t-body));
+  color: var(--ink);
+  background: var(--card);
+  border: 3px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+input[type="file"]:hover {
+  border-color: var(--green-deep);
+}
+input[type="file"]::file-selector-button {
+  min-height: 44px;
+  margin-right: 14px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--green-deep);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+/* A back link is a phone affordance. On a wide screen the sidebar is already
+   showing where you are, so it is noise. */
+@media (min-width: 1000px) {
+  .app-shell[data-view="standard"] .back-link {
+    display: none;
+  }
+}
+
+/* Rows of controls that should sit together rather than stack. */
+.inline-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.inline-form .field {
+  margin-bottom: 0;
+  flex: 1 1 160px;
+}
+
+/* The quiet "undo" that follows something destructive. */
+.undo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: var(--green-wash);
+  border: 3px solid var(--green);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  font-weight: 700;
+  color: var(--green-deep);
+}
+
+/* Saved / saving, shown next to a field that saves itself. */
+.autosave {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--ink-faint);
+  min-height: 24px;
+}
+.autosave[data-state="saved"] {
+  color: var(--green-deep);
 }
 
 /* --------------------------------------------------------------------------

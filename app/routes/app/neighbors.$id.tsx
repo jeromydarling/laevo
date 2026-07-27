@@ -295,7 +295,7 @@ export default function NeighborDetail() {
 
   return (
     <div className="wrap stack">
-      <p>
+      <p className="back-link">
         <Link to="/app/neighbors">‹ All neighbors</Link>
       </p>
 
@@ -454,11 +454,11 @@ export default function NeighborDetail() {
             <input type="hidden" name="intent" value="update" />
             <div className="field">
               <label htmlFor="firstName">First name</label>
-              <input id="firstName" name="firstName" defaultValue={str("first_name")} />
+              <input type="text" id="firstName" name="firstName" defaultValue={str("first_name")} />
             </div>
             <div className="field">
               <label htmlFor="lastName">Last name</label>
-              <input id="lastName" name="lastName" defaultValue={str("last_name")} />
+              <input type="text" id="lastName" name="lastName" defaultValue={str("last_name")} />
             </div>
             <div className="field">
               <label htmlFor="phone">Phone</label>
@@ -480,7 +480,7 @@ export default function NeighborDetail() {
             </div>
             <div className="field">
               <label htmlFor="needs">Anything they cannot eat or cook</label>
-              <input id="needs" name="needs" defaultValue={str("needs")} />
+              <input type="text" id="needs" name="needs" defaultValue={str("needs")} />
             </div>
             <div className="field">
               <label htmlFor="notes">Notes</label>

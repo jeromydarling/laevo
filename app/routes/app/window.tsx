@@ -71,6 +71,39 @@ export async function action({ context, request }: ActionFunctionArgs) {
   const { env } = ctx(context);
   const user = await requireUser(env, request);
   const form = await request.formData();
+  // Recorded against the wrong person is the likeliest mistake at a busy
+  // window, so it undoes in one press rather than needing a manager.
+  if (String(form.get("intent") ?? "") === "undo") {
+    const visitId = String(form.get("visitId") ?? "");
+    const visit = await env.DB.prepare(
+      "SELECT contact_id FROM visits WHERE id = ? AND org_id = ?",
+    )
+      .bind(visitId, user.orgId)
+      .first<{ contact_id: string }>();
+    if (!visit) return { error: "That visit is already gone." };
+
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM visits WHERE id = ? AND org_id = ?").bind(
+        visitId,
+        user.orgId,
+      ),
+      env.DB.prepare(
+        `UPDATE contacts
+            SET visit_count = (SELECT COUNT(*) FROM visits WHERE contact_id = ?),
+                last_visit_at = (SELECT MAX(visited_at) FROM visits WHERE contact_id = ?),
+                first_visit_at = (SELECT MIN(visited_at) FROM visits WHERE contact_id = ?)
+          WHERE id = ? AND org_id = ?`,
+      ).bind(
+        visit.contact_id,
+        visit.contact_id,
+        visit.contact_id,
+        visit.contact_id,
+        user.orgId,
+      ),
+    ]);
+    return { undone: "Taken back — that visit is not recorded." };
+  }
+
   const contactId = String(form.get("contactId") ?? "");
 
   const contact = await env.DB.prepare(
@@ -95,6 +128,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
 
   // A pantry with more than one location picks; a pantry with one does not
   // get asked a question it has no choice about.
+  const visitId = newId("vst");
   const chosenSite = String(form.get("siteId") ?? "");
   const site = chosenSite
     ? await env.DB.prepare(
@@ -114,7 +148,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
                            adults, children, seniors, first_visit, recorded_by)
        VALUES (?, ?, ?, ?, datetime('now'), ?, ?, ?, ?, ?, ?)`,
     ).bind(
-      newId("vst"),
+      visitId,
       user.orgId,
       contact.id,
       site?.id ?? null,
@@ -136,6 +170,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
 
   return {
     recorded: `${contact.first_name} ${contact.last_name}`.trim(),
+    visitId,
   };
 }
 
@@ -154,7 +189,12 @@ function sinceLabel(sqlDate: string | null): string {
 
 export default function Window() {
   const { q, results, searched, sites } = useLoaderData<typeof loader>();
-  const result = useActionData<{ recorded?: string; error?: string }>();
+  const result = useActionData<{
+    recorded?: string;
+    visitId?: string;
+    undone?: string;
+    error?: string;
+  }>();
   const navigation = useNavigation();
   const [params] = useSearchParams();
 
@@ -163,9 +203,25 @@ export default function Window() {
       <h1>Who is at the window?</h1>
 
       {result?.recorded && (
+        <div className="undo-bar" role="status">
+          <span>
+            Recorded — {result.recorded} has been in today. That is everything;
+            you can go back to the queue.
+          </span>
+          {result.visitId && (
+            <Form method="post">
+              <input type="hidden" name="intent" value="undo" />
+              <input type="hidden" name="visitId" value={result.visitId} />
+              <button type="submit" className="btn btn-secondary">
+                Wrong person — undo
+              </button>
+            </Form>
+          )}
+        </div>
+      )}
+      {result?.undone && (
         <p className="form-ok" role="status">
-          Recorded — {result.recorded} has been in today. That is everything;
-          you can go back to the queue.
+          {result.undone}
         </p>
       )}
       {result?.error && (
