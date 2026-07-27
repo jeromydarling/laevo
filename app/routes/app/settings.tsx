@@ -55,7 +55,12 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   ]);
 
   return {
-    me: { name: user.name, email: user.email, role: user.role },
+    me: {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      viewMode: user.viewMode,
+    },
     org: org ?? { name: user.orgName, plan: "community", service_area_note: null, visit_note: null },
     team: team.results ?? [],
     invites: invites.results ?? [],
@@ -359,6 +364,46 @@ export default function Settings() {
             </Form>
           </details>
         )}
+      </div>
+
+      <div className="card">
+        <h2 style={{ fontSize: "var(--t-h3)" }}>How the app looks to you</h2>
+        <p style={{ marginTop: 10 }}>
+          This is yours alone — it does not change what anybody else sees, and
+          it follows you to whatever device you sign in on.
+        </p>
+
+        <div className="stack" style={{ marginTop: 16 }}>
+          <Form method="post" action="/app/view">
+            <input type="hidden" name="mode" value="standard" />
+            <input type="hidden" name="back" value="/app/settings" />
+            <button
+              type="submit"
+              className={`btn ${data.me.viewMode === "standard" ? "btn-primary" : "btn-secondary"} btn-block`}
+            >
+              {data.me.viewMode === "standard" ? "✓ " : ""}Normal layout
+            </button>
+            <p className="small" style={{ marginTop: 8 }}>
+              A denser layout with a sidebar on a big screen. Good on a laptop.
+            </p>
+          </Form>
+
+          <Form method="post" action="/app/view" style={{ marginTop: 16 }}>
+            <input type="hidden" name="mode" value="roomy" />
+            <input type="hidden" name="back" value="/app/settings" />
+            <button
+              type="submit"
+              className={`btn ${data.me.viewMode === "roomy" ? "btn-primary" : "btn-secondary"} btn-block`}
+            >
+              {data.me.viewMode === "roomy" ? "✓ " : ""}Bigger layout
+            </button>
+            <p className="small" style={{ marginTop: 8 }}>
+              Large text and large buttons at every screen size. Good on a
+              shared tablet at the window, or any time the normal one feels
+              cramped. Nothing is hidden in this layout — it is the same app.
+            </p>
+          </Form>
+        </div>
       </div>
 
       <Form method="post" className="card">

@@ -49,6 +49,7 @@ export default [
     route("app/shelf/receive", "routes/app/shelf.receive.tsx"),
     route("app/shifts", "routes/app/shifts.tsx"),
     route("app/more", "routes/app/more.tsx"),
+    route("app/view", "routes/app/view.tsx"),
     route("app/locations", "routes/app/locations.tsx"),
     route("app/sources", "routes/app/sources.tsx"),
     route("app/reports", "routes/app/reports.tsx"),
