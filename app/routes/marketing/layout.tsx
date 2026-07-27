@@ -4,6 +4,7 @@ import { Wordmark, WheatMark } from "~/components/Brand";
 import { TextSizeControl } from "~/components/TextSize";
 import { ctx } from "~/lib/loader";
 import { getUser } from "~/lib/auth";
+import { PHOTO_DISCLOSURE } from "~/content/photos";
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const { env } = ctx(context);
@@ -149,19 +150,24 @@ export default function MarketingLayout() {
             </div>
           </div>
 
-          <p
-            className="small"
+          <div
             style={{
-              color: "#a9c6b6",
               marginTop: 36,
               borderTop: "1px solid #2b6349",
               paddingTop: 20,
-              maxWidth: "none",
             }}
           >
-            Built on Cloudflare Workers. Made for the people who keep their
-            neighbors fed.
-          </p>
+            <p className="small" style={{ color: "#a9c6b6", maxWidth: "none" }}>
+              Built on Cloudflare Workers. Made for the people who keep their
+              neighbors fed.
+            </p>
+            <p
+              className="small"
+              style={{ color: "#a9c6b6", maxWidth: "68ch", marginTop: 8 }}
+            >
+              {PHOTO_DISCLOSURE}
+            </p>
+          </div>
         </div>
       </footer>
     </>

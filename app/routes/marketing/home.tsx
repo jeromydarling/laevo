@@ -13,6 +13,7 @@ import { GUIDES } from "~/content/guides";
 import { PLANS, ALTERNATIVES, formatUsd } from "~/lib/pricing";
 import { Calculator } from "~/components/Calculator";
 import { WheatMark } from "~/components/Brand";
+import { Photo } from "~/components/Photo";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   return publicData(context);
@@ -100,6 +101,10 @@ export default function Home() {
             <span className="badge">Your data leaves when you do</span>
           </div>
         </div>
+
+        <div className="wrap" style={{ marginTop: 40 }}>
+          <Photo photo="storeroom" priority sizes="(min-width: 1120px) 1040px, 100vw" />
+        </div>
       </section>
 
       {/* ---- The scene ---- */}
@@ -126,6 +131,9 @@ export default function Home() {
                 problem, and keeping track is something software is genuinely
                 good at — if it is built for the person actually doing it.
               </p>
+              <div style={{ marginTop: 8 }}>
+                <Photo photo="packingHands" sizes="(min-width: 720px) 520px, 100vw" />
+              </div>
             </div>
 
             <div className="card">
@@ -248,6 +256,9 @@ export default function Home() {
                 <li>Every screen works one-handed.</li>
                 <li>Every screen has a paper fallback that is not a failure.</li>
               </ul>
+              <div style={{ marginTop: 20 }}>
+                <Photo photo="handsTablet" sizes="(min-width: 720px) 480px, 100vw" />
+              </div>
             </div>
           </div>
         </div>
@@ -256,6 +267,10 @@ export default function Home() {
       {/* ---- What it does ---- */}
       <section>
         <div className="wrap">
+          <div className="photo-strip" style={{ marginBottom: 40 }}>
+            <Photo photo="warehouse" rounded={false} sizes="(min-width: 1120px) 1040px, 100vw" />
+          </div>
+
           <h2>What Laevo actually does</h2>
           <p className="lead" style={{ marginTop: 12, marginBottom: 36 }}>
             Six things, done properly, instead of thirty things done thinly.

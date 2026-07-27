@@ -4,6 +4,7 @@ import { publicData } from "~/lib/loader";
 import { marketingMeta } from "~/lib/meta";
 import { faqLd, breadcrumbLd } from "~/lib/jsonld";
 import { TextSizeControl } from "~/components/TextSize";
+import { Photo } from "~/components/Photo";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   return publicData(context);
@@ -108,6 +109,9 @@ export default function ForVolunteers() {
             So we sat next to them and watched. Nearly everything that goes
             wrong is one of seven things. Here is each one, and what it changed.
           </p>
+          <div style={{ marginTop: 32 }}>
+            <Photo photo="handsTablet" priority sizes="(min-width: 760px) 680px, 100vw" />
+          </div>
         </div>
       </section>
 

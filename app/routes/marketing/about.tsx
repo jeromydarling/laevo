@@ -2,6 +2,7 @@ import { Link, useLoaderData } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { publicData } from "~/lib/loader";
 import { marketingMeta } from "~/lib/meta";
+import { Photo } from "~/components/Photo";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   return publicData(context);
@@ -32,6 +33,9 @@ export default function About() {
             does not describe the software at all, which felt like the right way
             round.
           </p>
+          <div style={{ marginTop: 32 }}>
+            <Photo photo="warehouse" priority sizes="(min-width: 760px) 680px, 100vw" />
+          </div>
         </div>
       </section>
 

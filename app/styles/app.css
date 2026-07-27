@@ -954,6 +954,55 @@ tr:last-child td {
   margin-top: 6px;
 }
 
+/* --------------------------------------------------------------------------
+   Photographs. Always full width of their container, never taller than they
+   need to be, and always with their space reserved before they arrive.
+   -------------------------------------------------------------------------- */
+
+.photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  /* A quiet edge so a pale photograph does not bleed into a cream page. */
+  border: 1px solid var(--line);
+  background: var(--green-wash);
+}
+
+.photo-square {
+  border-radius: 0;
+}
+
+.photo-band {
+  margin: 0;
+}
+
+/* A wide photograph used as a section opener, cropped so it stays a band
+   rather than eating a whole phone screen. */
+.photo-strip {
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  max-height: 320px;
+  display: flex;
+}
+.photo-strip .photo {
+  border: none;
+  border-radius: 0;
+  object-fit: cover;
+  min-height: 200px;
+}
+
+figure {
+  margin: 0;
+}
+
+figcaption {
+  margin-top: 10px;
+  font-size: var(--t-small);
+  color: var(--ink-faint);
+}
+
 .prose > * + * {
   margin-top: 20px;
 }
